@@ -223,7 +223,7 @@ Ce test est rouge tant que `StepCount` n'existe pas : c'est le point de départ.
 
 ## 7. Bonnes pratiques
 
-- **Conventional Commits** (`feat:`, `test:`, `refactor:`…) + petits commits atomiques, un par cycle TDD vert.
+- **Format de commit** `yyyy-mm-dd # N : (type) message` (N = numéro du commit du jour, type = `feat`, `fix`, `test`, `refactor`, `chore`, `docs`…), vérifié par commitlint. Exemple : `2026-10-05 # 1 : (chore) Mise en place du monorepo`. Petits commits atomiques, un par cycle TDD vert.
 - **Branches courtes + PR sur GitHub**, même en solo : la CI valide avant le merge sur `main`. Protéger `main` (CI obligatoire).
 - **Pas de `any`** et pas de `as` sans commentaire justificatif ; *branded types* pour les identifiants et les dates.
 - **Nommage métier** (*ubiquitous language*) : `DailyActivity`, `Streak`, `Goal`, pas `Data` ou `Manager`.
