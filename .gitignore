@@ -1,0 +1,21 @@
+node_modules/
+coverage/
+dist/
+reports/
+.stryker-tmp/
+
+# Expo / Android
+.expo/
+android/
+ios/
+*.apk
+*.aab
+
+# Environnement
+.env
+.env.*
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.log
