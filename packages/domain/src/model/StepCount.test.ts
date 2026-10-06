@@ -34,4 +34,22 @@ describe('StepCount', () => {
     expect(morning.value).toBe(1200);
     expect(evening.value).toBe(300);
   });
+
+  it('soustrait un compte de pas plus petit ou égal', () => {
+    const total = unwrap(StepCount.create(1500));
+    const morning = unwrap(StepCount.create(1200));
+
+    expect(unwrap(total.subtract(morning)).value).toBe(300);
+    expect(unwrap(total.subtract(total)).value).toBe(0);
+  });
+
+  it('refuse une soustraction qui donnerait un nombre de pas négatif', () => {
+    const morning = unwrap(StepCount.create(1200));
+    const total = unwrap(StepCount.create(1500));
+
+    expect(morning.subtract(total)).toEqual({
+      ok: false,
+      error: { kind: 'NegativeStepCount', value: -300 },
+    });
+  });
 });
