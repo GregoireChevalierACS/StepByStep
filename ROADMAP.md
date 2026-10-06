@@ -25,11 +25,13 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 
 | Sujet | Ce qu'il faut savoir |
 |---|---|
+| **Appareil cible** | S22 `SM-S901U1`, **Android 16** (SDK 36), One UI 8. Capteurs matériels Samsung `step_counter` et `step_detector` présents. |
 | **Capteur** | Android expose `TYPE_STEP_COUNTER`, un capteur matériel qui compte les pas depuis le dernier redémarrage, même quand l'app est fermée, avec une consommation de batterie quasi nulle. |
 | **Permission** | `ACTIVITY_RECOGNITION` doit être demandée à l'exécution. |
-| **Historique** | **Health Connect** est intégré à Android 14 et plus. Samsung Health peut y synchroniser ses pas, ce qui donne l'historique gratuitement. |
-| **Piège Expo** | `expo-sensors` (Pedometer) **ne fournit pas l'historique sur Android** : il ne compte qu'en temps réel, quand l'app est ouverte. Il faut donc Health Connect et/ou un module natif. |
-| **Piège Samsung** | One UI met en veille agressive les apps en arrière-plan (« Applications en veille profonde »). Il faut un écran qui guide l'utilisateur pour exclure l'app. |
+| **Historique** | **Ni Samsung Health ni Health Connect** (voir [ADR 0001](docs/adr/0001-historique-sans-health-connect.md)) : l'app construit elle-même son historique en **relevant périodiquement** la valeur cumulée de `TYPE_STEP_COUNTER` et en la stockant en SQLite. L'historique commence donc à l'installation de l'app. |
+| **Redémarrage** | Le compteur matériel **repart à 0 à chaque redémarrage**. Le domaine doit détecter cette remise à zéro dans la suite des relevés. Les pas faits entre le dernier relevé et l'extinction sont perdus, sauf si on prend un relevé à l'extinction (`ACTION_SHUTDOWN`) ou au démarrage (`BOOT_COMPLETED`). |
+| **Piège Expo** | `expo-sensors` (Pedometer) **ne fournit pas l'historique sur Android** : il ne compte qu'en temps réel, quand l'app est ouverte. Il faut donc un **petit module natif Expo (Kotlin)** qui lit `TYPE_STEP_COUNTER` à la demande, appelé depuis une tâche de fond. |
+| **Piège Samsung** | One UI met en veille agressive les apps en arrière-plan (« Applications en veille profonde »). Il faut un écran qui guide l'utilisateur pour exclure l'app. **C'est critique** : sans relevés en arrière-plan, l'historique a des trous. |
 | **Pas de câble USB data** | Tout le développement sur appareil passe par le **débogage sans fil (ADB Wi-Fi)** et par des **APK téléchargés via un lien ou un QR code**. Voir l'[annexe](#8-annexe--déploiement-sans-câble-usb). |
 
 **Conséquence :** on utilise Expo avec un *development build* (EAS ou build local), pas Expo Go, car les modules natifs ne fonctionnent pas dans Expo Go.
@@ -49,7 +51,7 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 | Mutation testing | **Stryker** | Vérifie que les tests détectent vraiment les régressions |
 | Property-based testing | `fast-check` | Invariants métier |
 | Persistance | `expo-sqlite` + Drizzle ORM | Typé, migrations versionnées |
-| Données santé | `react-native-health-connect` + son config plugin | Historique des pas |
+| Capteur de pas | Module natif Expo (Kotlin, Expo Modules API) pour `TYPE_STEP_COUNTER` + `expo-sensors` pour le temps réel | Historique construit par l'app, sans dépendance à Samsung Health ni à Health Connect |
 | Qualité | ESLint (typescript-eslint strict), Prettier, Husky, lint-staged, commitlint | Garde-fous automatiques avant chaque commit |
 | Règles d'architecture | `dependency-cruiser` ou `eslint-plugin-boundaries` | **Empêche** le domaine d'importer l'infrastructure |
 | CI/CD | GitHub Actions + EAS Build | Lint, tests et mutation testing à chaque push ; APK installable sans câble |
@@ -63,14 +65,16 @@ Architecture **hexagonale (Ports & Adapters)** :
 ```
 StepByStep/
 ├── packages/
-│   └── domain/                 # TS pur, 0 dépendance, testé avec Vitest
+│   └── domain/src/             # TS pur, 0 dépendance, testé avec Vitest
+│       ├── shared/             # Briques transverses du domaine (Result…)
 │       ├── model/              # Entités et Value Objects
 │       ├── services/           # Strategies (distance, calories, détection)
 │       ├── ports/              # Interfaces (StepSource, StepRepository, Clock…)
 │       └── usecases/           # Cas d'usage applicatifs
 ├── apps/
 │   └── mobile/                 # Expo
-│       ├── src/infrastructure/ # Adapters : HealthConnect, Pedometer, SQLite
+│       ├── modules/step-counter/ # Module natif Expo (Kotlin) : lecture de TYPE_STEP_COUNTER
+│       ├── src/infrastructure/ # Adapters : StepCounter natif, Pedometer, SQLite
 │       ├── src/presentation/   # Écrans + hooks ViewModel
 │       ├── src/composition/    # Composition root (injection de dépendances)
 │       └── e2e/                # Flows Maestro
@@ -91,12 +95,12 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 |---|---|
 | **Value Object** | `StepCount` (entier ≥ 0, immuable), `LocalDate`, `Distance`, `DailyGoal` : la validation est faite une seule fois, à la construction |
 | **Entity / Aggregate** | `DailyActivity` (date, pas, objectif) |
-| **Port / Adapter** | Port `StepSource` → `HealthConnectStepSource`, `PedometerStepSource`, `FakeStepSource` |
+| **Port / Adapter** | Port `StepCounterReader` → `NativeStepCounterReader`, `FakeStepCounterReader` ; port `StepSource` → `PedometerStepSource`, `FakeStepSource` |
 | **Repository** | `StepRepository` → `SqliteStepRepository`, `InMemoryStepRepository` (pour les tests) |
 | **Strategy** | `StrideLengthStrategy` (selon la taille ou une valeur fixe), `CalorieEstimator`, `StepDetectionAlgorithm` |
 | **Observer** | Flux de pas en temps réel (`subscribe` / `unsubscribe`) |
 | **Decorator** | `CachedStepSource` et `LoggingStepSource` enveloppent une source sans la modifier |
-| **Composite** | `MergedStepSource` combine Health Connect et le capteur live, en dédoublonnant |
+| **Composite** | `MergedStepSource` combine l'historique enregistré (SQLite) et le capteur live, en dédoublonnant |
 | **Pipes & Filters** | Pipeline de traitement du signal de l'accéléromètre (filtre passe-bas → détection de pics → anti-rebond) |
 | **State** | Machine d'états des permissions : `unknown → requested → granted / denied / permanentlyDenied` |
 | **Specification** | Règles de badges (« 7 jours consécutifs > 10 000 pas ») composables avec `and` / `or` |
@@ -135,7 +139,7 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 
 1. Configurer le **débogage sans fil** sur le S22 et vérifier la connexion avec `adb devices` (voir l'[annexe](#8-annexe--déploiement-sans-câble-usb)).
 2. Cloner le dépôt, créer le monorepo pnpm, configurer TS strict, ESLint, Prettier, Husky et commitlint.
-3. **Spike jetable** (hors TDD, assumé) : un écran qui affiche le capteur live et lit Health Connect sur le S22. Il sert à valider la faisabilité, puis on le **supprime**.
+3. **Spike jetable** (hors TDD, assumé) : un écran qui affiche le capteur live, et une tâche de fond qui lit `TYPE_STEP_COUNTER` via un module natif minimal, app fermée, sur le S22. Il sert à valider la faisabilité, puis on le **supprime**.
 4. **Walking skeleton :** app Expo dev build installée sur le S22 sans câble + un test Vitest + un flow Maestro + workflow GitHub Actions au vert.
 
 ✅ *Terminé quand* un push sur `main` déclenche lint et tests au vert, et que l'APK s'installe sur le S22 sans câble.
@@ -145,24 +149,25 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 Ordre suggéré des tests, du plus simple au plus riche :
 
 1. `StepCount` : refuse les négatifs et les non-entiers, se cumule avec `add()`.
-2. `DailyGoal` et calcul de la progression en %, plafonnée ou non.
-3. `DailyActivity` : objectif atteint ou non.
-4. Strategies `Distance` / `Calories`.
-5. `ComputeStreak` avec une `Clock` fake : cas limites de minuit, jours manquants, changement d'heure.
-6. Specifications de badges.
+2. `StepCounterReading` (valeur cumulée du capteur + horodatage) et calcul des pas entre deux relevés : **détection de la remise à zéro au redémarrage** (valeur qui baisse), répartition des pas sur les jours quand deux relevés encadrent minuit.
+3. `DailyGoal` et calcul de la progression en %, plafonnée ou non.
+4. `DailyActivity` : objectif atteint ou non.
+5. Strategies `Distance` / `Calories`.
+6. `ComputeStreak` avec une `Clock` fake : cas limites de minuit, jours manquants, changement d'heure.
+7. Specifications de badges.
 
 ✅ *Terminé quand* la couverture du domaine est ≈ 100 % et le score de mutation Stryker > 80 %.
 
 ### Phase 2 : cas d'usage (3–4 jours)
 
-`GetTodaySteps`, `GetWeeklyHistory`, `SetDailyGoal`, `SyncStepsFromSource`, tous testés avec des Fakes (`FakeStepSource`, `InMemoryStepRepository`, `FixedClock`).
+`RecordStepCounterReading` (prend un relevé du capteur et met à jour les pas du jour), `GetTodaySteps`, `GetWeeklyHistory`, `SetDailyGoal`, tous testés avec des Fakes (`FakeStepCounterReader`, `FakeStepSource`, `InMemoryStepRepository`, `FixedClock`).
 
 ### Phase 3 : adapters d'infrastructure (1 semaine)
 
 1. `SqliteStepRepository` + migrations Drizzle, avec les contract tests.
-2. `HealthConnectStepSource` : la lecture des données agrégées par jour et par heure passe par un mapper testé unitairement. Le SDK lui-même n'est pas testé.
+2. `NativeStepCounterReader` : module natif Expo en Kotlin, réduit au strict minimum (Humble Object). Il s'abonne à `TYPE_STEP_COUNTER`, renvoie la première valeur reçue et se désabonne. Seul le mapper côté TS est testé unitairement ; le Kotlin est validé sur le S22.
 3. `PedometerStepSource` (temps réel) en Observer.
-4. `MergedStepSource` (Composite) avec dédoublonnage testé.
+4. `MergedStepSource` (Composite) : historique SQLite + capteur live, avec dédoublonnage testé.
 5. Machine d'états des permissions (State) + écran d'explication.
 
 ### Phase 4 : présentation (1 semaine)
@@ -173,9 +178,10 @@ Ordre suggéré des tests, du plus simple au plus riche :
 
 ### Phase 5 : arrière-plan et notifications (3–4 jours)
 
-- `expo-background-task` pour une synchronisation périodique avec Health Connect.
+- `expo-background-task` pour un **relevé périodique** du `TYPE_STEP_COUNTER` (intervalle minimal imposé par Android : 15 min) via `RecordStepCounterReading`.
+- Relevés supplémentaires à l'extinction (`ACTION_SHUTDOWN`) et au démarrage (`BOOT_COMPLETED`) pour limiter les pas perdus au redémarrage.
 - Notification « Objectif atteint 🎉 », déclenchée par l'événement de domaine `GoalReached`.
-- Test manuel sur le S22 : app tuée, téléphone redémarré, mode veille profonde.
+- Test manuel sur le S22 : app tuée, téléphone redémarré, mode veille profonde. On vérifie que l'historique n'a pas de trou.
 
 ### Phase 6 (bonus) : algorithme de détection maison
 
@@ -199,25 +205,30 @@ Il s'agit de détecter les pas à partir de l'accéléromètre brut, en TS pur :
 ## 6. Premier test
 
 ```ts
-// packages/domain/model/StepCount.test.ts
-import { describe, it, expect } from 'vitest';
+// packages/domain/src/model/StepCount.test.ts (extrait)
+import { describe, expect, it } from 'vitest';
+import { unwrap } from '../testing/unwrap';
 import { StepCount } from './StepCount';
 
 describe('StepCount', () => {
   it('refuse un nombre de pas négatif', () => {
     const result = StepCount.create(-1);
-    expect(result.isErr()).toBe(true);
+
+    expect(result).toEqual({ ok: false, error: { kind: 'NegativeStepCount', value: -1 } });
   });
 
-  it('additionne deux comptes de pas', () => {
-    const a = StepCount.create(1200)._unsafeUnwrap();
-    const b = StepCount.create(300)._unsafeUnwrap();
-    expect(a.add(b).value).toBe(1500);
+  it('additionne deux comptes de pas sans modifier les originaux', () => {
+    const morning = unwrap(StepCount.create(1200));
+    const evening = unwrap(StepCount.create(300));
+
+    expect(morning.add(evening).value).toBe(1500);
   });
 });
 ```
 
-Ce test est rouge tant que `StepCount` n'existe pas : c'est le point de départ.
+Ce test était rouge tant que `StepCount` n'existait pas : c'était le point de départ.
+
+`Result<T, E>` est **maison** (`packages/domain/src/shared/Result.ts`) : une union discriminée `{ ok: true, value } | { ok: false, error }`, sans dépendance externe, que TypeScript affine avec un simple `if (!result.ok)`. Dans les tests, `unwrap()` (`src/testing/`) lit la valeur d'un `Result` en succès.
 
 ---
 
