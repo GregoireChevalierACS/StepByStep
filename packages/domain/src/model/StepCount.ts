@@ -24,4 +24,8 @@ export class StepCount {
   add(other: StepCount): StepCount {
     return new StepCount(this.value + other.value);
   }
+
+  subtract(other: StepCount): Result<StepCount, StepCountError> {
+    return StepCount.create(this.value - other.value);
+  }
 }
