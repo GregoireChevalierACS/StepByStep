@@ -149,7 +149,7 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 Ordre suggéré des tests, du plus simple au plus riche :
 
 1. `StepCount` : refuse les négatifs et les non-entiers, se cumule avec `add()`.
-2. `StepCounterReading` (valeur cumulée du capteur + horodatage) et calcul des pas entre deux relevés : **détection de la remise à zéro au redémarrage** (valeur qui baisse), répartition des pas sur les jours quand deux relevés encadrent minuit.
+2. `StepCounterReading` (valeur cumulée du capteur + numéro de démarrage `BOOT_COUNT` + horodatage epoch) et calcul des pas entre deux relevés : **détection de la remise à zéro au redémarrage** (autre démarrage ou valeur qui baisse). `distributeStepsByDay` répartit ces pas sur les jours locaux traversés **au prorata du temps**, avec un arrondi qui conserve le total. Le jour local vient d'un port `LocalCalendar` : le fuseau et le changement d'heure sont gérés par l'adapter.
 3. `DailyGoal` et calcul de la progression en %, plafonnée ou non.
 4. `DailyActivity` : objectif atteint ou non.
 5. Strategies `Distance` / `Calories`.
