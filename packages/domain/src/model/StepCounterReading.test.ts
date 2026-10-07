@@ -3,17 +3,27 @@ import { describe, expect, it } from 'vitest';
 import { unwrap } from '../testing/unwrap';
 import { StepCounterReading } from './StepCounterReading';
 
+// 2026-10-06T08:00:00Z
+const TAKEN_AT = Date.UTC(2026, 9, 6, 8);
+
 describe('StepCounterReading', () => {
   describe('création', () => {
-    it('accepte un relevé avec un compteur et un numéro de démarrage valides', () => {
-      const reading = unwrap(StepCounterReading.create({ stepsSinceBoot: 4200, bootCount: 7 }));
+    it('accepte un relevé avec un compteur, un numéro de démarrage et un horodatage valides', () => {
+      const reading = unwrap(
+        StepCounterReading.create({ stepsSinceBoot: 4200, bootCount: 7, takenAt: TAKEN_AT }),
+      );
 
       expect(reading.stepsSinceBoot.value).toBe(4200);
       expect(reading.bootCount).toBe(7);
+      expect(reading.takenAt).toBe(TAKEN_AT);
     });
 
     it('refuse un compteur de pas invalide en précisant la cause', () => {
-      const result = StepCounterReading.create({ stepsSinceBoot: -1, bootCount: 7 });
+      const result = StepCounterReading.create({
+        stepsSinceBoot: -1,
+        bootCount: 7,
+        takenAt: TAKEN_AT,
+      });
 
       expect(result).toEqual({
         ok: false,
@@ -25,15 +35,28 @@ describe('StepCounterReading', () => {
     });
 
     it.each([-1, 1.5, Number.NaN])('refuse un numéro de démarrage invalide : %s', (bootCount) => {
-      const result = StepCounterReading.create({ stepsSinceBoot: 4200, bootCount });
+      const result = StepCounterReading.create({
+        stepsSinceBoot: 4200,
+        bootCount,
+        takenAt: TAKEN_AT,
+      });
 
       expect(result).toEqual({ ok: false, error: { kind: 'InvalidBootCount', value: bootCount } });
     });
+
+    it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+      'refuse un horodatage invalide : %s',
+      (takenAt) => {
+        const result = StepCounterReading.create({ stepsSinceBoot: 4200, bootCount: 7, takenAt });
+
+        expect(result).toEqual({ ok: false, error: { kind: 'InvalidTakenAt', value: takenAt } });
+      },
+    );
   });
 
   describe('pas comptés depuis le relevé précédent', () => {
     const reading = (stepsSinceBoot: number, bootCount = 7) =>
-      unwrap(StepCounterReading.create({ stepsSinceBoot, bootCount }));
+      unwrap(StepCounterReading.create({ stepsSinceBoot, bootCount, takenAt: TAKEN_AT }));
 
     it("compte l'écart entre deux relevés du même démarrage", () => {
       expect(reading(5000).stepsSince(reading(4200)).value).toBe(800);

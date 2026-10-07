@@ -11,28 +11,39 @@ export interface InvalidBootCount {
   readonly value: number;
 }
 
-export type StepCounterReadingError = InvalidStepsSinceBoot | InvalidBootCount;
+export interface InvalidTakenAt {
+  readonly kind: 'InvalidTakenAt';
+  readonly value: number;
+}
+
+export type StepCounterReadingError = InvalidStepsSinceBoot | InvalidBootCount | InvalidTakenAt;
 
 /**
  * Relevé du capteur matériel TYPE_STEP_COUNTER : nombre de pas cumulés depuis
- * le démarrage du téléphone, et numéro de ce démarrage (Settings.Global.BOOT_COUNT).
+ * le démarrage du téléphone, numéro de ce démarrage (Settings.Global.BOOT_COUNT)
+ * et instant du relevé en millisecondes epoch (sans fuseau).
  */
 export class StepCounterReading {
   private constructor(
     readonly stepsSinceBoot: StepCount,
     readonly bootCount: number,
+    readonly takenAt: number,
   ) {}
 
   static create(props: {
     stepsSinceBoot: number;
     bootCount: number;
+    takenAt: number;
   }): Result<StepCounterReading, StepCounterReadingError> {
     const steps = StepCount.create(props.stepsSinceBoot);
     if (!steps.ok) return err({ kind: 'InvalidStepsSinceBoot', cause: steps.error });
     if (!Number.isInteger(props.bootCount) || props.bootCount < 0) {
       return err({ kind: 'InvalidBootCount', value: props.bootCount });
     }
-    return ok(new StepCounterReading(steps.value, props.bootCount));
+    if (!Number.isInteger(props.takenAt) || props.takenAt < 0) {
+      return err({ kind: 'InvalidTakenAt', value: props.takenAt });
+    }
+    return ok(new StepCounterReading(steps.value, props.bootCount, props.takenAt));
   }
 
   /**
