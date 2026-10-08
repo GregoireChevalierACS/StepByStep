@@ -152,8 +152,8 @@ Ordre suggéré des tests, du plus simple au plus riche :
 2. `StepCounterReading` (valeur cumulée du capteur + numéro de démarrage `BOOT_COUNT` + horodatage epoch) et calcul des pas entre deux relevés : **détection de la remise à zéro au redémarrage** (autre démarrage ou valeur qui baisse). `distributeStepsByDay` répartit ces pas sur les jours locaux traversés **au prorata du temps**, avec un arrondi qui conserve le total. Le jour local vient d'un port `LocalCalendar` : le fuseau et le changement d'heure sont gérés par l'adapter.
 3. `DailyGoal` et calcul de la progression en %, plafonnée ou non.
 4. `DailyActivity` : objectif atteint ou non.
-5. Strategies `Distance` / `Calories`.
-6. `ComputeStreak` avec une `Clock` fake : cas limites de minuit, jours manquants, changement d'heure.
+5. Strategy `StrideLengthStrategy` et `Distance`. *Calories (`CalorieEstimator`) : reportées, hors périmètre pour l'instant.*
+6. `computeStreak(activities, today)` : jours manquants, objectif raté, journée en cours qui ne casse pas la série. Le calcul de « aujourd'hui » (`Clock` + `LocalCalendar`, donc minuit et changement d'heure) se fait dans le cas d'usage de la phase 2.
 7. Specifications de badges.
 
 ✅ *Terminé quand* la couverture du domaine est ≈ 100 % et le score de mutation Stryker > 80 %.
