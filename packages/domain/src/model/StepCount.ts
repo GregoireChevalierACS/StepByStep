@@ -13,6 +13,8 @@ export interface NonIntegerStepCount {
 export type StepCountError = NegativeStepCount | NonIntegerStepCount;
 
 export class StepCount {
+  static readonly ZERO = new StepCount(0);
+
   private constructor(readonly value: number) {}
 
   static create(value: number): Result<StepCount, StepCountError> {

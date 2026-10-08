@@ -1,3 +1,4 @@
+export { DailyActivity } from './model/DailyActivity';
 export { DailyGoal } from './model/DailyGoal';
 export type { InvalidDailyGoal } from './model/DailyGoal';
 export { LocalDate } from './model/LocalDate';
