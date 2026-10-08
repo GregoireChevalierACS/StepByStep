@@ -1,3 +1,5 @@
+export { DailyGoal } from './model/DailyGoal';
+export type { InvalidDailyGoal } from './model/DailyGoal';
 export { LocalDate } from './model/LocalDate';
 export type { InvalidLocalDate } from './model/LocalDate';
 export { StepCount } from './model/StepCount';
