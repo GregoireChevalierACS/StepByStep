@@ -15,4 +15,13 @@ export class DailyGoal {
     if (!steps.ok || steps.value.value === 0) return err({ kind: 'InvalidDailyGoal', value });
     return ok(new DailyGoal(steps.value));
   }
+
+  /** Progression en % entier, arrondie à l'inférieur : 100 % n'apparaît qu'une fois l'objectif atteint. */
+  progressPercent(walked: StepCount): number {
+    return Math.floor((walked.value * 100) / this.steps.value);
+  }
+
+  cappedProgressPercent(walked: StepCount): number {
+    return Math.min(100, this.progressPercent(walked));
+  }
 }
