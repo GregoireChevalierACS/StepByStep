@@ -25,8 +25,16 @@ export class LocalDate {
   }
 
   next(): LocalDate {
-    const nextDay = new Date(Date.parse(`${this.iso}T00:00:00Z`) + MS_PER_DAY);
-    return new LocalDate(nextDay.toISOString().slice(0, 10));
+    return this.plusDays(1);
+  }
+
+  previous(): LocalDate {
+    return this.plusDays(-1);
+  }
+
+  private plusDays(days: number): LocalDate {
+    const day = new Date(Date.parse(`${this.iso}T00:00:00Z`) + days * MS_PER_DAY);
+    return new LocalDate(day.toISOString().slice(0, 10));
   }
 
   equals(other: LocalDate): boolean {

@@ -27,6 +27,16 @@ describe('LocalDate', () => {
     expect(unwrap(LocalDate.create(day)).next().toString()).toBe(nextDay);
   });
 
+  it.each([
+    ['2026-10-07', '2026-10-06'],
+    ['2026-11-01', '2026-10-31'],
+    ['2027-01-01', '2026-12-31'],
+    ['2028-03-01', '2028-02-29'],
+    ['2026-03-01', '2026-02-28'],
+  ])('la veille de %s est %s', (day, previousDay) => {
+    expect(unwrap(LocalDate.create(day)).previous().toString()).toBe(previousDay);
+  });
+
   it('compare deux dates par leur valeur', () => {
     const date = unwrap(LocalDate.create('2026-10-06'));
 
