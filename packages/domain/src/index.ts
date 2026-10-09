@@ -15,6 +15,10 @@ export type {
   StepCounterReadingError,
 } from './model/StepCounterReading';
 export type { LocalCalendar } from './ports/LocalCalendar';
+export { bestDayOfAtLeast, streakOfAtLeast } from './services/badgeRules';
+export type { ActivityHistory } from './services/badgeRules';
+export { BADGES, unlockedBadges } from './services/badges';
+export type { Badge } from './services/badges';
 export { computeStreak } from './services/computeStreak';
 export { dailyStepsFromReadings } from './services/dailyStepsFromReadings';
 export { distributeStepsByDay } from './services/distributeStepsByDay';
