@@ -41,6 +41,13 @@ export class LocalDate {
     return this.iso === other.iso;
   }
 
+  /** Négatif si cette date est avant l'autre, positif si après, zéro si égales (pour `sort`). */
+  compareTo(other: LocalDate): number {
+    // Le format ISO AAAA-MM-JJ, à largeur fixe, se trie comme du texte.
+    if (this.iso === other.iso) return 0;
+    return this.iso < other.iso ? -1 : 1;
+  }
+
   toString(): string {
     return this.iso;
   }

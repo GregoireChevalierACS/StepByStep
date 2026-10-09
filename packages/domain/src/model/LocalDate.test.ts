@@ -43,4 +43,16 @@ describe('LocalDate', () => {
     expect(date.equals(unwrap(LocalDate.create('2026-10-06')))).toBe(true);
     expect(date.equals(date.next())).toBe(false);
   });
+
+  it.each([
+    ['2026-10-06', '2026-10-07', -1],
+    ['2026-10-07', '2026-10-06', 1],
+    ['2026-10-06', '2026-10-06', 0],
+    ['2026-12-31', '2027-01-01', -1],
+    ['2026-09-30', '2026-10-01', -1],
+  ])('compare %s à %s dans l’ordre chronologique → %i', (a, b, expected) => {
+    expect(Math.sign(unwrap(LocalDate.create(a)).compareTo(unwrap(LocalDate.create(b))))).toBe(
+      expected,
+    );
+  });
 });
