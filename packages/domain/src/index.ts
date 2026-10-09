@@ -14,6 +14,18 @@ export type {
   InvalidTakenAt,
   StepCounterReadingError,
 } from './model/StepCounterReading';
+export { TimeZoneHistory } from './model/TimeZoneHistory';
+export type {
+  ConflictingTimeZonePeriods,
+  EmptyTimeZoneHistory,
+  TimeZoneHistoryError,
+} from './model/TimeZoneHistory';
+export { TimeZonePeriod } from './model/TimeZonePeriod';
+export type {
+  InvalidPeriodStart,
+  InvalidTimeZone,
+  TimeZonePeriodError,
+} from './model/TimeZonePeriod';
 export type { LocalCalendar } from './ports/LocalCalendar';
 export { bestDayOfAtLeast, streakOfAtLeast } from './services/badgeRules';
 export type { ActivityHistory } from './services/badgeRules';
