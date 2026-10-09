@@ -33,7 +33,18 @@ export const distributeStepsByDay = (
       currentTakenAt: current.takenAt,
     });
   }
+  return ok(distributeOrderedStepsByDay(previous, current, calendar));
+};
 
+/**
+ * Cœur de la répartition, pour deux relevés dont l'ordre est déjà garanti par
+ * l'appelant (`previous.takenAt <= current.takenAt`). Interne au domaine.
+ */
+export const distributeOrderedStepsByDay = (
+  previous: StepCounterReading,
+  current: StepCounterReading,
+  calendar: LocalCalendar,
+): DailySteps[] => {
   // Temps passé dans chacun des jours locaux consécutifs traversés.
   const firstDate = calendar.dateOf(previous.takenAt);
   const durations: number[] = [];
@@ -49,14 +60,12 @@ export const distributeStepsByDay = (
   durations.push(current.takenAt - dayStart);
 
   let day = firstDate;
-  return ok(
-    current
-      .stepsSince(previous)
-      .split(durations)
-      .map((steps) => {
-        const dailySteps = { date: day, steps };
-        day = day.next();
-        return dailySteps;
-      }),
-  );
+  return current
+    .stepsSince(previous)
+    .split(durations)
+    .map((steps) => {
+      const dailySteps = { date: day, steps };
+      day = day.next();
+      return dailySteps;
+    });
 };
