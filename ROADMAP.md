@@ -55,6 +55,8 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 | Qualité | ESLint (typescript-eslint strict), Prettier, Husky, lint-staged, commitlint | Garde-fous automatiques avant chaque commit |
 | Règles d'architecture | `dependency-cruiser` ou `eslint-plugin-boundaries` | **Empêche** le domaine d'importer l'infrastructure |
 | CI/CD | GitHub Actions + EAS Build | Lint, tests et mutation testing à chaque push ; APK installable sans câble |
+| Serveur de synchronisation (optionnel) | NestJS + PostgreSQL + TypeORM (migrations), SQL brut pour les requêtes analytiques | Sauvegarde, multi-appareil et défis entre amis ; réutilise le domaine tel quel (voir [ADR 0002](docs/adr/0002-serveur-de-synchronisation-optionnel.md)) |
+| Tests serveur | Vitest/Jest + `supertest` + Testcontainers (PostgreSQL réel) | Contract tests des repositories et E2E de l'API contre une vraie base |
 
 ---
 
@@ -72,18 +74,23 @@ StepByStep/
 │       ├── ports/              # Interfaces (StepSource, StepRepository, Clock…)
 │       └── usecases/           # Cas d'usage applicatifs
 ├── apps/
-│   └── mobile/                 # Expo
-│       ├── modules/step-counter/ # Module natif Expo (Kotlin) : lecture de TYPE_STEP_COUNTER
-│       ├── src/infrastructure/ # Adapters : StepCounter natif, Pedometer, SQLite
-│       ├── src/presentation/   # Écrans + hooks ViewModel
-│       ├── src/composition/    # Composition root (injection de dépendances)
-│       └── e2e/                # Flows Maestro
+│   ├── mobile/                 # Expo
+│   │   ├── modules/step-counter/ # Module natif Expo (Kotlin) : lecture de TYPE_STEP_COUNTER
+│   │   ├── src/infrastructure/ # Adapters : StepCounter natif, Pedometer, SQLite
+│   │   ├── src/presentation/   # Écrans + hooks ViewModel
+│   │   ├── src/composition/    # Composition root (injection de dépendances)
+│   │   └── e2e/                # Flows Maestro
+│   └── api/                    # NestJS (phase 8, optionnel)
+│       ├── src/modules/<contexte>/application/    # Cas d'usage serveur, appellent le domaine
+│       ├── src/modules/<contexte>/infrastructure/ # Contrôleurs, DTO, repositories PostgreSQL
+│       ├── src/migrations/     # Migrations TypeORM versionnées
+│       └── test/               # E2E supertest + Testcontainers
 ├── docs/
 │   └── adr/                    # Architecture Decision Records
 └── .github/workflows/          # CI
 ```
 
-**Règle d'or :** les dépendances pointent vers le domaine, jamais l'inverse. Le domaine ne connaît ni React, ni Expo, ni Android.
+**Règle d'or :** les dépendances pointent vers le domaine, jamais l'inverse. Le domaine ne connaît ni React, ni Expo, ni Android, ni NestJS. C'est ce qui permet au **même** `@stepbystep/domain` de tourner sur le téléphone et sur le serveur : seuls les adapters changent.
 
 ---
 
@@ -112,6 +119,8 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 | **Humble Object** | Le code natif et les capteurs, impossibles à tester unitairement, sont réduits au strict minimum |
 | **Test Data Builder / Object Mother** | `aDailyActivity().withSteps(8000).onDate('2026-10-04').build()` |
 | **Clock injectable** | Port `Clock` : indispensable pour tester minuit, les séries de jours, les fuseaux horaires |
+| **Idempotent Receiver** | Serveur : un relevé renvoyé plusieurs fois (réseau instable) n'est enregistré qu'une fois (clé unique + `ON CONFLICT DO NOTHING`) |
+| **Transactional Outbox** | Serveur : `GoalReached` est écrit dans la même transaction que les pas, puis publié par un job (notification push) |
 
 **À éviter :** Singleton global, Service Locator, héritage profond, fichier `utils` fourre-tout.
 
@@ -127,7 +136,7 @@ Chaque pattern ci-dessous répond à un vrai besoin de l'app. Un pattern ajouté
 ```
 
 - **Cycle TDD strict :** 🔴 test rouge → 🟢 code minimal → 🔵 refactor, avec un commit à chaque étape verte.
-- **Contract tests :** une fonction `describeStepRepositoryContract(factory)` est exécutée contre l'`InMemory` **et** le `Sqlite`. Le Fake est ainsi garanti de se comporter comme le vrai.
+- **Contract tests :** une fonction `describeStepRepositoryContract(factory)` est exécutée contre l'`InMemory` **et** le `Sqlite`. Le Fake est ainsi garanti de se comporter comme le vrai. Côté serveur, la même suite tourne contre le repository PostgreSQL (Testcontainers).
 - **Golden master :** pour l'algorithme de détection (phase 6), on enregistre de vraies marches avec le S22 en CSV (export via le partage Android ou Bluetooth), puis on vérifie que l'algorithme trouve ±5 % du nombre de pas comptés à la main.
 - **Property-based testing :** par exemple « la somme des pas horaires = total journalier », « le streak n'est jamais négatif ».
 
@@ -198,7 +207,34 @@ Il s'agit de détecter les pas à partir de l'accéléromètre brut, en TS pur :
 - EAS Build : APK téléchargeable par lien ou QR code, puis éventuellement le Play Store (canal de test interne).
 - ADR dans `docs/adr/` pour tracer les choix d'architecture.
 
-**Durée totale estimée :** 5 à 7 semaines à temps partiel, hors phase 6.
+### Phase 8 (optionnel) : serveur de synchronisation NestJS + PostgreSQL
+
+Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'historique, le retrouver sur un autre appareil et lancer des défis entre amis (voir [ADR 0002](docs/adr/0002-serveur-de-synchronisation-optionnel.md)). Il ne dépend que du domaine (phase 1) : on peut le développer avant les phases 3 à 5, en l'alimentant avec des relevés simulés.
+
+**8a : MVP de synchronisation**
+
+1. `apps/api` : NestJS en TS strict, PostgreSQL via `docker compose`, configuration validée au démarrage.
+2. Modèle et **migrations TypeORM** : `devices`, `step_counter_readings` (en ajout seul, contrainte unique `(device_id, boot_count, taken_at)`), `daily_steps` (projection recalculée).
+3. `POST /devices/:id/readings` : envoi des relevés par lots. **Idempotent** (un relevé renvoyé n'est compté qu'une fois) et tolérant aux relevés en retard ou dans le désordre : les `daily_steps` touchés sont recalculés avec `distributeStepsByDay` du domaine, dans une transaction.
+4. `GET /devices/:id/daily-steps?from&to` et `GET /devices/:id/streak` (`computeStreak` du domaine).
+5. Validation des DTO (`class-validator`), traduction des `Result` du domaine en erreurs HTTP (`400`, `409`, `422`), documentation OpenAPI (`@nestjs/swagger`).
+6. Tests : cas d'usage avec des Fakes, **contract tests** du repository (`InMemory` et PostgreSQL via Testcontainers), E2E `supertest` avec le scénario « relevés en double, dans le désordre, redémarrage au milieu ».
+7. CI : tests serveur dans GitHub Actions (Docker disponible sur `ubuntu-latest`).
+
+**8b : extensions, par ordre de priorité**
+
+1. **Authentification** (JWT) : un compte rattache plusieurs appareils.
+2. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
+3. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
+4. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.
+5. `GoalReached` → notification push (Firebase Cloud Messaging) via un **outbox transactionnel**.
+6. Classement en direct par WebSocket (gateway NestJS).
+7. Bilan mensuel en PDF stocké sur S3.
+8. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
+
+✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI est consultable.
+
+**Durée totale estimée :** 5 à 7 semaines à temps partiel, hors phases 6 et 8.
 
 ---
 
@@ -239,7 +275,7 @@ Ce test était rouge tant que `StepCount` n'existait pas : c'était le point de 
 - **Pas de `any`** et pas de `as` sans commentaire justificatif ; *branded types* pour les identifiants et les dates.
 - **Nommage métier** (*ubiquitous language*) : `DailyActivity`, `Streak`, `Goal`, pas `Data` ou `Manager`.
 - **Dates :** tout le domaine en `LocalDate` (sans heure). Les conversions de fuseau se font aux frontières, dans les adapters.
-- **Vie privée :** les données de santé restent locales, sans analytics.
+- **Vie privée :** les données de santé restent locales, sans analytics. La synchronisation serveur (phase 8) est **désactivée par défaut** et n'est activée que sur demande explicite de l'utilisateur.
 - **Secrets :** jamais dans le dépôt (token EAS dans les *GitHub Secrets*).
 
 ---
