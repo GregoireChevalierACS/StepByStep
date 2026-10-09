@@ -53,10 +53,10 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 | Persistance | `expo-sqlite` + Drizzle ORM | Typé, migrations versionnées |
 | Capteur de pas | Module natif Expo (Kotlin, Expo Modules API) pour `TYPE_STEP_COUNTER` + `expo-sensors` pour le temps réel | Historique construit par l'app, sans dépendance à Samsung Health ni à Health Connect |
 | Qualité | ESLint (typescript-eslint strict), Prettier, Husky, lint-staged, commitlint | Garde-fous automatiques avant chaque commit |
-| Règles d'architecture | `dependency-cruiser` ou `eslint-plugin-boundaries` | **Empêche** le domaine d'importer l'infrastructure |
+| Règles d'architecture | ESLint `no-restricted-imports` sur le domaine (React, Expo, Drizzle, NestJS, TypeORM, `pg`), puis `dependency-cruiser` ou `eslint-plugin-boundaries` | **Empêche** le domaine d'importer l'infrastructure, mobile comme serveur |
 | CI/CD | GitHub Actions + EAS Build | Lint, tests et mutation testing à chaque push ; APK installable sans câble |
 | Serveur de synchronisation (optionnel) | NestJS + PostgreSQL + TypeORM (migrations), SQL brut pour les requêtes analytiques | Sauvegarde, multi-appareil et défis entre amis ; réutilise le domaine tel quel (voir [ADR 0002](docs/adr/0002-serveur-de-synchronisation-optionnel.md)) |
-| Tests serveur | Vitest/Jest + `supertest` + Testcontainers (PostgreSQL réel) | Contract tests des repositories et E2E de l'API contre une vraie base |
+| Tests serveur | **Jest** (outil par défaut de NestJS, transformation TS par `@swc/jest`, y compris des sources de `@stepbystep/domain`) + `supertest` + Testcontainers (PostgreSQL réel) | Contract tests des repositories et E2E de l'API contre une vraie base. Le domaine reste testé avec Vitest |
 
 ---
 
@@ -164,6 +164,9 @@ Ordre suggéré des tests, du plus simple au plus riche :
 5. Strategy `StrideLengthStrategy` et `Distance`. *Calories (`CalorieEstimator`) : reportées, hors périmètre pour l'instant.*
 6. `computeStreak(activities, today)` : jours manquants, objectif raté, journée en cours qui ne casse pas la série. Le calcul de « aujourd'hui » (`Clock` + `LocalCalendar`, donc minuit et changement d'heure) se fait dans le cas d'usage de la phase 2.
 7. Specifications de badges.
+8. `dailyStepsFromReadings(readings, calendar)` : d'une **série** de relevés à des pas par jour. Trie par instant, ignore les doublons, enchaîne `distributeStepsByDay` sur chaque paire consécutive et cumule par jour. Propriété `fast-check` : le résultat ne dépend ni de l'ordre d'arrivée ni des doublons. C'est ce qui permet de **recalculer** les jours touchés quand un relevé arrive en retard (côté serveur comme côté mobile).
+9. `TimeZoneHistory` : historique des fuseaux de l'appareil, sous forme de **périodes** (identifiant IANA, ex. `Europe/Paris`, + instant de début). Un nouvel élément n'est ajouté **que quand le fuseau change** : rien n'est répété sur chaque relevé. Le domaine choisit la période en vigueur à un instant ; les règles du fuseau (heure d'été…) restent dans l'adapter `LocalCalendar`.
+10. `GoalHistory` : historique de l'objectif quotidien (objectif + date d'effet). `goalOn(date)` donne l'objectif d'un jour passé, pour que changer d'objectif ne réécrive pas les séries déjà faites.
 
 ✅ *Terminé quand* la couverture du domaine est ≈ 100 % et le score de mutation Stryker > 80 %.
 
@@ -189,6 +192,7 @@ Ordre suggéré des tests, du plus simple au plus riche :
 
 - `expo-background-task` pour un **relevé périodique** du `TYPE_STEP_COUNTER` (intervalle minimal imposé par Android : 15 min) via `RecordStepCounterReading`.
 - Relevés supplémentaires à l'extinction (`ACTION_SHUTDOWN`) et au démarrage (`BOOT_COMPLETED`) pour limiter les pas perdus au redémarrage.
+- Écoute de `ACTION_TIMEZONE_CHANGED` : une nouvelle période est ajoutée à la `TimeZoneHistory` locale (SQLite), pour que l'historique reste juste après un voyage.
 - Notification « Objectif atteint 🎉 », déclenchée par l'événement de domaine `GoalReached`.
 - Test manuel sur le S22 : app tuée, téléphone redémarré, mode veille profonde. On vérifie que l'historique n'a pas de trou.
 
@@ -213,17 +217,26 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 
 **8a : MVP de synchronisation**
 
-1. `apps/api` : NestJS en TS strict, PostgreSQL via `docker compose`, configuration validée au démarrage.
-2. Modèle et **migrations TypeORM** : `devices`, `step_counter_readings` (en ajout seul, contrainte unique `(device_id, boot_count, taken_at)`), `daily_steps` (projection recalculée).
-3. `POST /devices/:id/readings` : envoi des relevés par lots. **Idempotent** (un relevé renvoyé n'est compté qu'une fois) et tolérant aux relevés en retard ou dans le désordre : les `daily_steps` touchés sont recalculés avec `distributeStepsByDay` du domaine, dans une transaction.
-4. `GET /devices/:id/daily-steps?from&to` et `GET /devices/:id/streak` (`computeStreak` du domaine).
-5. Validation des DTO (`class-validator`), traduction des `Result` du domaine en erreurs HTTP (`400`, `409`, `422`), documentation OpenAPI (`@nestjs/swagger`).
-6. Tests : cas d'usage avec des Fakes, **contract tests** du repository (`InMemory` et PostgreSQL via Testcontainers), E2E `supertest` avec le scénario « relevés en double, dans le désordre, redémarrage au milieu ».
-7. CI : tests serveur dans GitHub Actions (Docker disponible sur `ubuntu-latest`).
+*Prérequis :* étapes 8 à 10 de la phase 1 (`dailyStepsFromReadings`, `TimeZoneHistory`, `GoalHistory`).
+
+1. `apps/api` : NestJS en TS strict, PostgreSQL via `docker compose`, configuration validée au démarrage. Tests avec **Jest**.
+2. Ajouter `@nestjs/*`, `typeorm` et `pg` aux imports interdits dans le domaine (règle ESLint existante).
+3. Modèle et **migrations TypeORM**, avec des **entités de persistance séparées du domaine** : les classes du domaine ne reçoivent aucun décorateur, des mappers testés font la traduction dans les deux sens.
+   - `accounts` et `devices` (**plusieurs appareils pour un compte**, `devices.account_id`). En 8a, un compte est créé avec son premier appareil, sans authentification.
+   - `step_counter_readings` : en ajout seul, contrainte unique `(device_id, boot_count, taken_at)`.
+   - `device_time_zones` : périodes de fuseau `(device_id, time_zone, valid_from)`, unique sur `(device_id, valid_from)`.
+   - `daily_goals` : historique de l'objectif `(account_id, goal, effective_from)`.
+   - `daily_steps` : projection recalculée, par appareil et par jour.
+4. **API versionnée dès le départ** : toutes les routes sous `/v1`. Un changement incompatible crée `/v2`, et `/v1` reste servi tant que des apps l'utilisent.
+5. `POST /v1/devices/:id/readings` : envoi par lots des relevés **et des changements de fuseau survenus depuis le dernier envoi**. Le fuseau n'est envoyé que lorsqu'il change (le téléphone l'enregistre sur l'événement Android `ACTION_TIMEZONE_CHANGED`). **Idempotent** (`ON CONFLICT DO NOTHING`) et tolérant au retard et au désordre : les jours touchés, y compris ceux des relevés voisins, sont recalculés avec `dailyStepsFromReadings` dans une transaction, chaque relevé étant interprété avec le fuseau en vigueur à son instant.
+6. `PUT /v1/accounts/:id/goal` (ajoute une entrée à l'historique), `GET /v1/devices/:id/daily-steps?from&to` et `GET /v1/accounts/:id/streak` (`computeStreak` + `GoalHistory` ; « aujourd'hui » selon le fuseau courant de l'appareil).
+7. Validation des DTO (`class-validator`), traduction des `Result` du domaine en erreurs HTTP (`400`, `409`, `422`), documentation OpenAPI (`@nestjs/swagger`).
+8. Tests : cas d'usage avec des Fakes, **contract tests** du repository (`InMemory` et PostgreSQL via Testcontainers), E2E `supertest` avec le scénario « relevés en double, dans le désordre, redémarrage au milieu, changement de fuseau ».
+9. CI : tests serveur dans GitHub Actions (Docker disponible sur `ubuntu-latest`).
 
 **8b : extensions, par ordre de priorité**
 
-1. **Authentification** (JWT) : un compte rattache plusieurs appareils.
+1. **Authentification** (JWT) : un compte rattache plusieurs appareils. *À décider avant :* la règle d'agrégation des pas d'un compte qui a plusieurs appareils le même jour (additionner compterait deux fois les pas d'un utilisateur qui porte deux téléphones ; maximum par jour ou appareil principal ?).
 2. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
 3. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
 4. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.
@@ -232,7 +245,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 7. Bilan mensuel en PDF stocké sur S3.
 8. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
 
-✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI est consultable.
+✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage + changement de fuseau » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI `/v1` est consultable.
 
 **Durée totale estimée :** 5 à 7 semaines à temps partiel, hors phases 6 et 8.
 
@@ -274,7 +287,8 @@ Ce test était rouge tant que `StepCount` n'existait pas : c'était le point de 
 - **Branches courtes + PR sur GitHub**, même en solo : la CI valide avant le merge sur `main`. Protéger `main` (CI obligatoire).
 - **Pas de `any`** et pas de `as` sans commentaire justificatif ; *branded types* pour les identifiants et les dates.
 - **Nommage métier** (*ubiquitous language*) : `DailyActivity`, `Streak`, `Goal`, pas `Data` ou `Manager`.
-- **Dates :** tout le domaine en `LocalDate` (sans heure). Les conversions de fuseau se font aux frontières, dans les adapters.
+- **Dates :** tout le domaine en `LocalDate` (sans heure). Les conversions de fuseau se font aux frontières, dans les adapters. Le fuseau de l'appareil est historisé par périodes (`TimeZoneHistory`), jamais répété sur chaque relevé.
+- **Persistance :** le domaine ne porte aucune annotation d'ORM (ni Drizzle, ni TypeORM). Les modèles de persistance sont séparés et traduits par des mappers testés.
 - **Vie privée :** les données de santé restent locales, sans analytics. La synchronisation serveur (phase 8) est **désactivée par défaut** et n'est activée que sur demande explicite de l'utilisateur.
 - **Secrets :** jamais dans le dépôt (token EAS dans les *GitHub Secrets*).
 
