@@ -22,3 +22,5 @@ export type { StrideLengthStrategy } from './services/StrideLengthStrategy';
 export type { DailySteps, ReadingsOutOfOrder } from './services/distributeStepsByDay';
 export { err, ok } from './shared/Result';
 export type { Err, Ok, Result } from './shared/Result';
+export { specification } from './shared/Specification';
+export type { Specification } from './shared/Specification';
