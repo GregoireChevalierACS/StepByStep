@@ -16,6 +16,7 @@ export type {
 } from './model/StepCounterReading';
 export type { LocalCalendar } from './ports/LocalCalendar';
 export { computeStreak } from './services/computeStreak';
+export { dailyStepsFromReadings } from './services/dailyStepsFromReadings';
 export { distributeStepsByDay } from './services/distributeStepsByDay';
 export { FixedStrideLength, HeightBasedStrideLength } from './services/StrideLengthStrategy';
 export type { StrideLengthStrategy } from './services/StrideLengthStrategy';
