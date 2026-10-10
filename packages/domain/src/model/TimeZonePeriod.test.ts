@@ -28,6 +28,10 @@ describe('TimeZonePeriod', () => {
     },
   );
 
+  it('accepte zéro comme instant de début (borne incluse)', () => {
+    expect(unwrap(TimeZonePeriod.create({ timeZone: 'UTC', since: 0 })).since).toBe(0);
+  });
+
   it.each([-1, 1.5, Number.NaN])('refuse un instant de début invalide : %s', (since) => {
     expect(TimeZonePeriod.create({ timeZone: 'Europe/Paris', since })).toEqual({
       ok: false,

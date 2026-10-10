@@ -34,6 +34,15 @@ describe('StepCounterReading', () => {
       });
     });
 
+    it('accepte zéro comme numéro de démarrage et comme horodatage (bornes incluses)', () => {
+      const reading = unwrap(
+        StepCounterReading.create({ stepsSinceBoot: 0, bootCount: 0, takenAt: 0 }),
+      );
+
+      expect(reading.bootCount).toBe(0);
+      expect(reading.takenAt).toBe(0);
+    });
+
     it.each([-1, 1.5, Number.NaN])('refuse un numéro de démarrage invalide : %s', (bootCount) => {
       const result = StepCounterReading.create({
         stepsSinceBoot: 4200,

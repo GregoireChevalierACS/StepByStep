@@ -2,12 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { specification } from '../shared/Specification';
 import { activityHistory } from '../testing/activityHistory';
 import { type ActivityHistory } from './badgeRules';
-import { unlockedBadges } from './badges';
+import { BADGES, unlockedBadges } from './badges';
 
 const unlockedIds = (history: ActivityHistory) => unlockedBadges(history).map(({ id }) => id);
 const days = (count: number, steps: number) => Array.from({ length: count }, () => steps);
 
 describe('badges', () => {
+  it('a un catalogue cohérent : identifiants uniques, libellé et description renseignés', () => {
+    const ids = BADGES.map(({ id }) => id);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const badge of BADGES) {
+      expect(badge.label.trim()).not.toBe('');
+      expect(badge.description.trim()).not.toBe('');
+    }
+  });
+
   it('ne débloque aucun badge sans activité', () => {
     expect(unlockedIds(activityHistory([]))).toEqual([]);
   });
