@@ -12,6 +12,7 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
     "test:mutation": "pnpm --filter @stepbystep/domain test:mutation"
   },
   "lint-staged": {

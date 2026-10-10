@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # Dépendances pnpm de tout le monorepo (lockfile à la racine).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Une seule PR pour les mises à jour mineures et correctives des outils de dev.
+      outillage:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Le runner Vitest de Stryker 10 n'active pas les mutants avec Vitest 5 (voir ROADMAP).
+      - dependency-name: vitest
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitest/*'
+        update-types: [version-update:semver-major]
+      # typescript-eslint 8 ne supporte pas encore TypeScript 7.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  # Versions des actions utilisées dans les workflows GitHub.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
