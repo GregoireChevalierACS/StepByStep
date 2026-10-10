@@ -3,6 +3,13 @@ export { DailyGoal } from './model/DailyGoal';
 export { Distance } from './model/Distance';
 export type { InvalidDistance } from './model/Distance';
 export type { InvalidDailyGoal } from './model/DailyGoal';
+export { GoalHistory } from './model/GoalHistory';
+export type {
+  ConflictingGoalChanges,
+  EmptyGoalHistory,
+  GoalChange,
+  GoalHistoryError,
+} from './model/GoalHistory';
 export { LocalDate } from './model/LocalDate';
 export type { InvalidLocalDate } from './model/LocalDate';
 export { StepCount } from './model/StepCount';
