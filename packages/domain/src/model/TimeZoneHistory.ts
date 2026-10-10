@@ -16,7 +16,9 @@ export type TimeZoneHistoryError = EmptyTimeZoneHistory | ConflictingTimeZonePer
 // Ordre total et indépendant de la locale : par instant, puis par identifiant de fuseau.
 const chronologically = (a: TimeZonePeriod, b: TimeZonePeriod): number => {
   if (a.since !== b.since) return a.since - b.since;
+  // Stryker disable next-line ConditionalExpression: équivalent, deux périodes égales (même instant, même fuseau) sont interchangeables dans le tri.
   if (a.timeZone === b.timeZone) return 0;
+  // Stryker disable next-line EqualityOperator: équivalent, l'égalité est déjà traitée à la ligne précédente.
   return a.timeZone < b.timeZone ? -1 : 1;
 };
 

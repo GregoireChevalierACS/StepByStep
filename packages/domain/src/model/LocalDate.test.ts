@@ -7,15 +7,23 @@ describe('LocalDate', () => {
     expect(unwrap(LocalDate.create('2026-10-06')).toString()).toBe('2026-10-06');
   });
 
-  it.each(['2026-02-30', '2026-13-01', '2026-10-6', '06/10/2026', ''])(
-    'refuse une date invalide : "%s"',
-    (value) => {
-      expect(LocalDate.create(value)).toEqual({
-        ok: false,
-        error: { kind: 'InvalidLocalDate', value },
-      });
-    },
-  );
+  it.each([
+    '2026-02-30',
+    '2026-13-01',
+    '2026-10-6',
+    '06/10/2026',
+    '',
+    ' 2026-10-06',
+    '2026-10-06 ',
+    '2026-10-06T00:00',
+    '+002026-10-06',
+    '20261006',
+  ])('refuse une date invalide : "%s"', (value) => {
+    expect(LocalDate.create(value)).toEqual({
+      ok: false,
+      error: { kind: 'InvalidLocalDate', value },
+    });
+  });
 
   it.each([
     ['2026-10-06', '2026-10-07'],

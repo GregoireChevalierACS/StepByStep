@@ -45,10 +45,10 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 | Langage | TypeScript `strict` + `noUncheckedIndexedAccess` | Typage maximal |
 | Mobile | React Native + Expo (dev build) + Expo Router | Stack TS standard, config plugins pour le natif |
 | Monorepo | pnpm workspaces | Isole un domaine **pur TS**, sans dépendance à React Native |
-| Tests unitaires | Vitest (domaine) / Jest + `jest-expo` (app) | Vitest est très rapide pour boucler en TDD |
+| Tests unitaires | Vitest **4** (domaine) / Jest + `jest-expo` (app) | Vitest est très rapide pour boucler en TDD. Domaine maintenu en Vitest 4 : le runner Vitest de Stryker 10 n'active pas les mutants avec Vitest 5 (à réévaluer à chaque version de Stryker) |
 | Tests de composants | React Native Testing Library | Teste le comportement, pas l'implémentation |
 | Tests E2E | **Maestro** (connecté au S22 par ADB Wi-Fi) | Simple et lisible (YAML) |
-| Mutation testing | **Stryker** | Vérifie que les tests détectent vraiment les régressions |
+| Mutation testing | **Stryker** (`vitest-runner` + `typescript-checker`) | Vérifie que les tests détectent vraiment les régressions. Seuil bloquant à 80 % en CI, rapport HTML joint à chaque run |
 | Property-based testing | `fast-check` | Invariants métier |
 | Persistance | `expo-sqlite` + Drizzle ORM | Typé, migrations versionnées |
 | Capteur de pas | Module natif Expo (Kotlin, Expo Modules API) pour `TYPE_STEP_COUNTER` + `expo-sensors` pour le temps réel | Historique construit par l'app, sans dépendance à Samsung Health ni à Health Connect |
@@ -168,7 +168,9 @@ Ordre suggéré des tests, du plus simple au plus riche :
 9. `TimeZoneHistory` : historique des fuseaux de l'appareil, sous forme de **périodes** (identifiant IANA, ex. `Europe/Paris`, + instant de début). Un nouvel élément n'est ajouté **que quand le fuseau change** : rien n'est répété sur chaque relevé. Le domaine choisit la période en vigueur à un instant ; les règles du fuseau (heure d'été…) restent dans l'adapter `LocalCalendar`. Périodes reçues dans n'importe quel ordre et en double sans effet, périodes redondantes fusionnées, deux fuseaux au même instant refusés (`ConflictingTimeZonePeriods`), avant la première période : premier fuseau connu.
 10. `GoalHistory` : historique de l'objectif quotidien (objectif + date d'effet). `goalOn(date)` donne l'objectif d'un jour passé, pour que changer d'objectif ne réécrive pas les séries déjà faites. `from` : ordre et doublons sans effet, changements redondants fusionnés, deux objectifs à la même date refusés (`ConflictingGoalChanges`). `record` : un objectif déjà fixé le même jour est remplacé (la dernière décision l'emporte).
 
-✅ *Terminé quand* la couverture du domaine est ≈ 100 % et le score de mutation Stryker > 80 %.
+✅ *Terminé quand* la couverture du domaine est ≈ 100 % et le score de mutation Stryker > 80 %. **Phase terminée** : couverture 100 %, score de mutation 100 % (209 mutants valides détectés, 10 mutants équivalents ignorés avec justification).
+
+*Règle de test issue de Stryker :* aucune donnée de test n'est construite au chargement d'un fichier (haut de fichier, corps d'un `describe`, tableau d'`it.each`). On utilise des fixtures paresseuses (fonctions appelées dans le test), sinon un mutant qui casse la construction fait échouer le chargement du fichier sans faire échouer de test, et Stryker le compte à tort comme survivant.
 
 ### Phase 2 : cas d'usage (3–4 jours)
 
@@ -206,7 +208,7 @@ Il s'agit de détecter les pas à partir de l'accéléromètre brut, en TS pur :
 
 ### Phase 7 : industrialisation (continue)
 
-- Stryker dans la CI (seuil bloquant sur `packages/domain`).
+- ✅ Stryker dans la CI (seuil bloquant à 80 % sur `packages/domain`, en place depuis la fin de la phase 1).
 - Flows Maestro sur le S22 (via ADB Wi-Fi) avant chaque release.
 - EAS Build : APK téléchargeable par lien ou QR code, puis éventuellement le Play Store (canal de test interne).
 - ADR dans `docs/adr/` pour tracer les choix d'architecture.
