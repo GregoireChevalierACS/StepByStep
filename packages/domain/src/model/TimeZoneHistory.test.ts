@@ -10,10 +10,11 @@ const period = (timeZone: string, since: string) =>
 const summary = (history: TimeZoneHistory) =>
   history.periods.map(({ timeZone, since }) => ({ timeZone, since }));
 
+// Fixtures paresseuses : créées pendant les tests, jamais au chargement du module.
 // Voyage : Paris, puis New York le 10 octobre à 14 h UTC, puis retour à Paris le 20.
-const paris = period('Europe/Paris', '2026-10-01T00:00');
-const newYork = period('America/New_York', '2026-10-10T14:00');
-const backToParis = period('Europe/Paris', '2026-10-20T08:00');
+const paris = () => period('Europe/Paris', '2026-10-01T00:00');
+const newYork = () => period('America/New_York', '2026-10-10T14:00');
+const backToParis = () => period('Europe/Paris', '2026-10-20T08:00');
 
 describe('TimeZoneHistory', () => {
   describe('construction', () => {
@@ -25,12 +26,12 @@ describe('TimeZoneHistory', () => {
     });
 
     it('range les périodes dans l’ordre chronologique, quel que soit l’ordre d’arrivée', () => {
-      const history = unwrap(TimeZoneHistory.from([backToParis, paris, newYork]));
+      const history = () => unwrap(TimeZoneHistory.from([backToParis(), paris(), newYork()]));
 
-      expect(summary(history)).toEqual(
-        summary(unwrap(TimeZoneHistory.from([paris, newYork, backToParis]))),
+      expect(summary(history())).toEqual(
+        summary(unwrap(TimeZoneHistory.from([paris(), newYork(), backToParis()]))),
       );
-      expect(history.periods.map(({ timeZone }) => timeZone)).toEqual([
+      expect(history().periods.map(({ timeZone }) => timeZone)).toEqual([
         'Europe/Paris',
         'America/New_York',
         'Europe/Paris',
@@ -38,21 +39,24 @@ describe('TimeZoneHistory', () => {
     });
 
     it('ignore une période reçue en double', () => {
-      expect(unwrap(TimeZoneHistory.from([paris, newYork, newYork])).periods).toHaveLength(2);
+      expect(unwrap(TimeZoneHistory.from([paris(), newYork(), newYork()])).periods).toHaveLength(2);
     });
 
     it('ne garde que les changements : deux périodes successives du même fuseau n’en font qu’une', () => {
-      const history = unwrap(
-        TimeZoneHistory.from([paris, period('Europe/Paris', '2026-10-05T12:00'), newYork]),
-      );
+      const history = () =>
+        unwrap(
+          TimeZoneHistory.from([paris(), period('Europe/Paris', '2026-10-05T12:00'), newYork()]),
+        );
 
-      expect(summary(history)).toEqual(summary(unwrap(TimeZoneHistory.from([paris, newYork]))));
+      expect(summary(history())).toEqual(
+        summary(unwrap(TimeZoneHistory.from([paris(), newYork()]))),
+      );
     });
 
     it('refuse deux fuseaux différents au même instant', () => {
       const conflicting = period('Asia/Tokyo', '2026-10-10T14:00');
 
-      expect(TimeZoneHistory.from([paris, newYork, conflicting])).toEqual({
+      expect(TimeZoneHistory.from([paris(), newYork(), conflicting])).toEqual({
         ok: false,
         error: {
           kind: 'ConflictingTimeZonePeriods',
@@ -82,7 +86,7 @@ describe('TimeZoneHistory', () => {
   });
 
   describe('fuseau en vigueur à un instant', () => {
-    const trip = unwrap(TimeZoneHistory.from([paris, newYork, backToParis]));
+    const trip = () => unwrap(TimeZoneHistory.from([paris(), newYork(), backToParis()]));
 
     it.each([
       ['2026-10-05T12:00', 'Europe/Paris'],
@@ -91,32 +95,32 @@ describe('TimeZoneHistory', () => {
       ['2026-10-15T09:00', 'America/New_York'],
       ['2026-10-25T09:00', 'Europe/Paris'],
     ])('à %s UTC, le fuseau est %s', (instant, timeZone) => {
-      expect(trip.timeZoneAt(at(instant))).toBe(timeZone);
+      expect(trip().timeZoneAt(at(instant))).toBe(timeZone);
     });
 
     it('utilise le premier fuseau connu pour un instant antérieur à toute période', () => {
-      expect(trip.timeZoneAt(at('2026-09-01T00:00'))).toBe('Europe/Paris');
+      expect(trip().timeZoneAt(at('2026-09-01T00:00'))).toBe('Europe/Paris');
     });
   });
 
   describe('enregistrement d’un changement de fuseau', () => {
-    const history = unwrap(TimeZoneHistory.from([paris]));
+    const history = () => unwrap(TimeZoneHistory.from([paris()]));
 
     it('ajoute une période quand le fuseau change', () => {
-      const updated = unwrap(history.record(newYork));
+      const updated = unwrap(history().record(newYork()));
 
       expect(updated.timeZoneAt(at('2026-10-15T09:00'))).toBe('America/New_York');
-      expect(history.periods).toHaveLength(1);
+      expect(history().periods).toHaveLength(1);
     });
 
     it('ne change rien quand le fuseau est le même que celui en vigueur', () => {
-      const updated = unwrap(history.record(period('Europe/Paris', '2026-10-12T10:00')));
+      const updated = unwrap(history().record(period('Europe/Paris', '2026-10-12T10:00')));
 
-      expect(summary(updated)).toEqual(summary(history));
+      expect(summary(updated)).toEqual(summary(history()));
     });
 
     it('signale un changement contradictoire avec une période connue', () => {
-      expect(history.record(period('Asia/Tokyo', '2026-10-01T00:00'))).toEqual({
+      expect(history().record(period('Asia/Tokyo', '2026-10-01T00:00'))).toEqual({
         ok: false,
         error: {
           kind: 'ConflictingTimeZonePeriods',

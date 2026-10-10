@@ -16,9 +16,10 @@ const summary = (history: GoalHistory) =>
   );
 const goalOn = (history: GoalHistory, day: string) => history.goalOn(date(day)).steps.value;
 
+// Fixtures paresseuses : créées pendant les tests, jamais au chargement du module.
 // 10 000 pas depuis le 1er octobre, 12 000 à partir du 10.
-const initial = change(10_000, '2026-10-01');
-const raised = change(12_000, '2026-10-10');
+const initial = () => change(10_000, '2026-10-01');
+const raised = () => change(12_000, '2026-10-10');
 
 describe('GoalHistory', () => {
   describe('construction', () => {
@@ -27,7 +28,7 @@ describe('GoalHistory', () => {
     });
 
     it('range les changements par date, quel que soit l’ordre d’arrivée, et ignore les doublons', () => {
-      expect(summary(unwrap(GoalHistory.from([raised, initial, raised])))).toEqual([
+      expect(summary(unwrap(GoalHistory.from([raised(), initial(), raised()])))).toEqual([
         '10000@2026-10-01',
         '12000@2026-10-10',
       ]);
@@ -35,12 +36,12 @@ describe('GoalHistory', () => {
 
     it('ne garde que les changements : un objectif identique au précédent est ignoré', () => {
       expect(
-        summary(unwrap(GoalHistory.from([initial, change(10_000, '2026-10-05'), raised]))),
+        summary(unwrap(GoalHistory.from([initial(), change(10_000, '2026-10-05'), raised()]))),
       ).toEqual(['10000@2026-10-01', '12000@2026-10-10']);
     });
 
     it('refuse deux objectifs différents à la même date, faute de savoir lequel est le dernier', () => {
-      expect(GoalHistory.from([initial, raised, change(8_000, '2026-10-10')])).toEqual({
+      expect(GoalHistory.from([initial(), raised(), change(8_000, '2026-10-10')])).toEqual({
         ok: false,
         error: {
           kind: 'ConflictingGoalChanges',
@@ -54,7 +55,7 @@ describe('GoalHistory', () => {
       // 8 000 le 10 est redondant avec le 8 000 du 1er (il est fusionné), mais il contredit 12 000.
       // À date égale, le tri place 8 000 avant 12 000 : le redondant est vu en premier.
       expect(
-        GoalHistory.from([change(8_000, '2026-10-01'), change(8_000, '2026-10-10'), raised]),
+        GoalHistory.from([change(8_000, '2026-10-01'), change(8_000, '2026-10-10'), raised()]),
       ).toEqual({
         ok: false,
         error: {
@@ -67,7 +68,7 @@ describe('GoalHistory', () => {
   });
 
   describe('objectif d’un jour', () => {
-    const history = unwrap(GoalHistory.from([initial, raised]));
+    const history = () => unwrap(GoalHistory.from([initial(), raised()]));
 
     it.each([
       ['2026-10-01', 10_000],
@@ -75,42 +76,44 @@ describe('GoalHistory', () => {
       ['2026-10-10', 12_000],
       ['2026-11-15', 12_000],
     ])('le %s, l’objectif est de %i pas', (day, steps) => {
-      expect(goalOn(history, day)).toBe(steps);
+      expect(goalOn(history(), day)).toBe(steps);
     });
 
     it('utilise le premier objectif connu pour un jour antérieur à tout changement', () => {
-      expect(goalOn(history, '2026-09-15')).toBe(10_000);
+      expect(goalOn(history(), '2026-09-15')).toBe(10_000);
     });
   });
 
   describe('enregistrement d’un nouvel objectif', () => {
-    const history = unwrap(GoalHistory.from([initial]));
+    const history = () => unwrap(GoalHistory.from([initial()]));
 
     it('applique le nouvel objectif à partir de sa date, sans réécrire le passé', () => {
-      const updated = unwrap(history.record(raised));
+      const updated = unwrap(history().record(raised()));
 
       expect(goalOn(updated, '2026-10-09')).toBe(10_000);
       expect(goalOn(updated, '2026-10-10')).toBe(12_000);
-      expect(summary(history)).toEqual(['10000@2026-10-01']);
+      expect(summary(history())).toEqual(['10000@2026-10-01']);
     });
 
     it('remplace l’objectif déjà fixé le même jour : la dernière décision l’emporte', () => {
       const updated = unwrap(
-        unwrap(history.record(change(8_000, '2026-10-10'))).record(change(12_000, '2026-10-10')),
+        unwrap(history().record(change(8_000, '2026-10-10'))).record(change(12_000, '2026-10-10')),
       );
 
       expect(summary(updated)).toEqual(['10000@2026-10-01', '12000@2026-10-10']);
     });
 
     it('revenir le même jour à l’objectif précédent annule le changement', () => {
-      const updated = unwrap(unwrap(history.record(raised)).record(change(10_000, '2026-10-10')));
+      const updated = unwrap(
+        unwrap(history().record(raised())).record(change(10_000, '2026-10-10')),
+      );
 
       expect(summary(updated)).toEqual(['10000@2026-10-01']);
     });
 
     it('ne change rien quand l’objectif est identique à celui en vigueur', () => {
-      expect(summary(unwrap(history.record(change(10_000, '2026-10-12'))))).toEqual(
-        summary(history),
+      expect(summary(unwrap(history().record(change(10_000, '2026-10-12'))))).toEqual(
+        summary(history()),
       );
     });
   });

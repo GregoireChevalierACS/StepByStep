@@ -17,7 +17,8 @@ describe('DailyGoal', () => {
   });
 
   describe('progression en %', () => {
-    const goal = unwrap(DailyGoal.create(10_000));
+    // Fixture paresseuse : créée pendant les tests, jamais au chargement du module.
+    const goal = () => unwrap(DailyGoal.create(10_000));
     const steps = (value: number) => unwrap(StepCount.create(value));
 
     it.each([
@@ -27,7 +28,7 @@ describe('DailyGoal', () => {
       [10_000, 100],
       [12_500, 125],
     ])('%s pas donnent %s %% sans plafond, arrondi à l’inférieur', (walked, percent) => {
-      expect(goal.progressPercent(steps(walked))).toBe(percent);
+      expect(goal().progressPercent(steps(walked))).toBe(percent);
     });
 
     it.each([
@@ -35,7 +36,7 @@ describe('DailyGoal', () => {
       [10_000, 100],
       [12_500, 100],
     ])('%s pas donnent %s %% avec un plafond à 100 %%', (walked, percent) => {
-      expect(goal.cappedProgressPercent(steps(walked))).toBe(percent);
+      expect(goal().cappedProgressPercent(steps(walked))).toBe(percent);
     });
 
     it('atteint 100 % plafonné si et seulement si l’objectif est atteint', () => {
