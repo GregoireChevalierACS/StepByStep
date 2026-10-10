@@ -43,3 +43,15 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
+
+      # Seuil bloquant : la commande échoue si le score de mutation du domaine passe sous 80 %.
+      - name: Test de mutation du domaine (Stryker)
+        run: pnpm --filter @stepbystep/domain test:mutation
+
+      - name: Rapport de mutation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-mutation
+          path: packages/domain/reports/mutation/
+          if-no-files-found: ignore
