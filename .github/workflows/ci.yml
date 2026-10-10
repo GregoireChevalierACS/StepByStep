@@ -31,6 +31,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Bloque la PR si une dépendance a une vulnérabilité de niveau élevé ou critique.
+      - name: Audit de sécurité des dépendances
+        run: pnpm audit --audit-level high
+
       - name: Format des messages de commit
         if: github.event_name == 'pull_request'
         run: >
@@ -42,7 +46,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      - run: pnpm test
+      # Tests + couverture : échoue si la couverture du domaine passe sous 100 %.
+      - run: pnpm test:coverage
 
       # Seuil bloquant : la commande échoue si le score de mutation du domaine passe sous 80 %.
       - name: Test de mutation du domaine (Stryker)
