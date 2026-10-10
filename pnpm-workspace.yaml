@@ -1,3 +1,9 @@
 packages:
   - packages/*
   - apps/*
+
+overrides:
+  # Correctif de sécurité (GHSA-4mjr-xmp4-gh2g et deux autres DoS) : qs est figé en 6.15.1
+  # par typed-rest-client, dépendance de développement de @stryker-mutator/core (envoi des
+  # rapports au tableau de bord Stryker). À retirer dès que Stryker embarque qs >= 6.16.
+  qs: ^6.16.0
