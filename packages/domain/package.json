@@ -9,12 +9,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^5.0.3",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/typescript-checker": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "fast-check": "^4.10.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^4.1.11"
   }
 }

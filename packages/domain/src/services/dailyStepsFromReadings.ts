@@ -23,6 +23,7 @@ export const dailyStepsFromReadings = (
   const uniqueReadings = new Map<string, StepCounterReading>();
   for (const reading of readings) {
     const known = uniqueReadings.get(identityOf(reading));
+    // Stryker disable next-line EqualityOperator: équivalent, à valeur égale les deux relevés sont identiques (même identité, même compteur).
     if (!known || reading.stepsSinceBoot.value > known.stepsSinceBoot.value) {
       uniqueReadings.set(identityOf(reading), reading);
     }

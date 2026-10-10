@@ -21,6 +21,7 @@ export class Distance {
 
   /** Un facteur négatif ou non fini compte pour zéro : la distance reste toujours valide. */
   scaledBy(factor: number): Distance {
+    // Stryker disable next-line EqualityOperator: équivalent, un facteur nul donne 0 dans les deux branches (meters × 0 = 0).
     return new Distance(Number.isFinite(factor) && factor > 0 ? this.meters * factor : 0);
   }
 }
