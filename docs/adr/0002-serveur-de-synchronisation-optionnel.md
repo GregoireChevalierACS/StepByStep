@@ -26,7 +26,7 @@ Les relevés sont pris hors ligne et peuvent arriver au serveur en retard, en do
 8. **Historique de l'objectif.** Un changement d'objectif ne réécrit pas le passé : table `daily_goals (account_id, goal, effective_from)` et `GoalHistory` dans le domaine, utilisé par `computeStreak`.
 9. **Plusieurs appareils pour un compte** (`devices.account_id`). La règle d'agrégation des pas d'un même jour sur plusieurs appareils reste à décider avant l'authentification (phase 8b).
 10. **Domaine sans annotations d'ORM.** Les entités TypeORM sont des modèles de persistance séparés, traduits par des mappers testés. La règle ESLint du domaine interdit aussi `@nestjs/*`, `typeorm` et `pg`.
-11. **Jest** pour les tests serveur (outil par défaut de NestJS). Le domaine reste testé avec Vitest.
+11. **Vitest 4** pour les tests serveur. _Révisée le 2026-10-11 :_ la décision initiale était Jest, outil historique de NestJS. Mais NestJS 12 est distribué en **ESM**, son modèle officiel ESM utilise Vitest, et Jest n'y fonctionne qu'avec le mode expérimental `--experimental-vm-modules` de Node. Vitest donne aussi un seul outil de test pour tout le monorepo (le domaine l'utilise déjà, compatible Stryker).
 12. **API versionnée dès le départ** (`/v1`). Un changement incompatible crée `/v2` ; `/v1` reste servi tant que des apps l'utilisent.
 
 ## Alternatives écartées
