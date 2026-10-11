@@ -49,5 +49,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['apps/api/**/*.ts'],
+    rules: {
+      // Un module NestJS est une classe vide décorée par @Module : cas prévu par la règle.
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+    },
+  },
   prettier,
 );
