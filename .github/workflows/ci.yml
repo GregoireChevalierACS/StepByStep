@@ -35,8 +35,11 @@ jobs:
       - name: Audit de sécurité des dépendances
         run: pnpm audit --audit-level high
 
+      # Convention réservée aux commits humains : Dependabot ne peut pas produire la date et le
+      # numéro du jour. On se fie à l'auteur de la PR (fourni par GitHub), pas au message,
+      # qui serait falsifiable. Toutes les autres étapes restent obligatoires pour Dependabot.
       - name: Format des messages de commit
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
         run: >
           pnpm exec commitlint
           --from ${{ github.event.pull_request.base.sha }}
