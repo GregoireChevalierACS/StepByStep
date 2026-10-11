@@ -1,14 +1,25 @@
 import { Controller, Get } from '@nestjs/common';
+import {
+  HealthCheck,
+  type HealthCheckResult,
+  HealthCheckService,
+  TypeOrmHealthIndicator,
+} from '@nestjs/terminus';
 
-export interface HealthStatus {
-  readonly status: 'ok';
-}
-
-/** Sonde de disponibilité : utilisée par la supervision et le script de démo. */
+/**
+ * Sonde de disponibilité (supervision, script de démo) : 200 si l'API et sa base
+ * répondent, 503 sinon, avec le détail par composant.
+ */
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly database: TypeOrmHealthIndicator,
+  ) {}
+
   @Get()
-  check(): HealthStatus {
-    return { status: 'ok' };
+  @HealthCheck()
+  check(): Promise<HealthCheckResult> {
+    return this.health.check([() => this.database.pingCheck('database')]);
   }
 }

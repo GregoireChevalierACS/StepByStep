@@ -8,16 +8,17 @@ export default defineConfig({
   ssr: { resolve: { conditions: ['source', ...defaultServerConditions] } },
   test: {
     include: ['src/**/*.test.ts'],
-    // Environnement valide pour démarrer l'application dans les tests (aucune base n'est
-    // contactée à ce stade : l'URL n'a besoin que d'être bien formée).
-    env: {
-      NODE_ENV: 'test',
-      DATABASE_URL: 'postgres://stepbystep:stepbystep@localhost:5432/stepbystep_test',
-    },
+    env: { NODE_ENV: 'test' },
+    // PostgreSQL de test démarré une fois pour la suite (Testcontainers), puis son URL est
+    // injectée dans DATABASE_URL avant chaque fichier de test.
+    globalSetup: ['src/testing/postgres.global-setup.ts'],
+    setupFiles: ['src/testing/database-url.setup.ts'],
+    // Démarrer un conteneur peut prendre plus que le délai par défaut.
+    hookTimeout: 60_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/main.ts'],
+      exclude: ['src/**/*.test.ts', 'src/main.ts', 'src/testing/**'],
     },
   },
 });
