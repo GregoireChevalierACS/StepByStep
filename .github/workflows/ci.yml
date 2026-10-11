@@ -47,6 +47,8 @@ jobs:
           --verbose
 
       - run: pnpm lint
+      # Règles d'architecture sur le graphe complet : sens des dépendances, cycles, API publique du domaine.
+      - run: pnpm lint:architecture
       - run: pnpm format:check
       - run: pnpm typecheck
       # Tests + couverture : échoue si la couverture du domaine passe sous 100 %.
