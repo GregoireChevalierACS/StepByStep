@@ -42,7 +42,7 @@ flowchart LR
   api --> domain
 ```
 
-La règle est vérifiée automatiquement : ESLint interdit au domaine d'importer un framework ou une couche d'infrastructure.
+La règle est vérifiée automatiquement, à deux niveaux : ESLint signale dans l'éditeur tout import de framework dans le domaine, et [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) contrôle en CI le graphe complet des dépendances (`pnpm lint:architecture`) : domaine sans aucune dépendance externe, apps limitées à l'API publique du domaine, aucun cycle, code de production indépendant du code de test et des dépendances de développement.
 
 ## Démarrer
 
@@ -72,6 +72,7 @@ pnpm db:down
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Typage              | TypeScript `strict` + `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`                       |
 | Lint / format       | `typescript-eslint` (`strictTypeChecked`), Prettier                                                                          |
+| Architecture        | dependency-cruiser : sens des dépendances, cycles, API publique du domaine                                                   |
 | Avant chaque commit | Husky + lint-staged + commitlint (format `aaaa-mm-jj # N : (type) message`)                                                  |
 | Tests               | Vitest, fast-check (propriétés), Stryker (mutation)                                                                          |
 | CI (GitHub Actions) | audit des dépendances, commitlint, lint, format, types, tests + couverture, mutation ; `main` protégée (PR + CI obligatoire) |
