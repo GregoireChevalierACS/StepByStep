@@ -18,7 +18,9 @@
     "test:coverage": "pnpm -r test:coverage",
     "test:mutation": "pnpm --filter @stepbystep/domain test:mutation",
     "db:up": "docker compose up --detach --wait",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @stepbystep/api build && pnpm --filter @stepbystep/api db:migrate",
+    "db:revert": "pnpm --filter @stepbystep/api build && pnpm --filter @stepbystep/api db:revert"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

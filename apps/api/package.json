@@ -10,7 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node dist/database/migrate.js run",
+    "db:revert": "node dist/database/migrate.js revert",
+    "db:status": "node dist/database/migrate.js status"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.2",
