@@ -36,9 +36,13 @@ export default tseslint.config(
                 '@expo/*',
                 'drizzle-orm',
                 'drizzle-orm/*',
+                '@nestjs/*',
+                'typeorm',
+                'typeorm/*',
+                'pg',
               ],
               message:
-                'Le domaine ne doit dépendre ni de React, ni d’Expo, ni de l’infrastructure.',
+                'Le domaine ne doit dépendre ni de React, ni d’Expo, ni de NestJS, ni de l’infrastructure.',
             },
             {
               group: ['**/apps/**'],
