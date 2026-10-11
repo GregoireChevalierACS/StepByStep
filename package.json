@@ -14,7 +14,9 @@
     "typecheck": "pnpm --filter @stepbystep/domain build && pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:coverage": "pnpm -r test:coverage",
-    "test:mutation": "pnpm --filter @stepbystep/domain test:mutation"
+    "test:mutation": "pnpm --filter @stepbystep/domain test:mutation",
+    "db:up": "docker compose up --detach --wait",
+    "db:down": "docker compose down"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

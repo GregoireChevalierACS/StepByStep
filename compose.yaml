@@ -1,0 +1,28 @@
+# Services de développement local. Démarrage : `pnpm db:up` (attend que la base soit prête).
+name: stepbystep
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    # Identifiants de développement local uniquement, alignés sur apps/api/.env.example.
+    # En production, la connexion vient de l'environnement (DATABASE_URL), jamais du dépôt.
+    environment:
+      POSTGRES_USER: stepbystep
+      POSTGRES_PASSWORD: stepbystep
+      POSTGRES_DB: stepbystep
+    # Publié sur 127.0.0.1 seulement : la base n'est pas joignable depuis le réseau.
+    ports:
+      - '127.0.0.1:5432:5432'
+    # Depuis PostgreSQL 18, l'image range ses données sous /var/lib/postgresql/18/docker :
+    # on monte le dossier parent, comme le déclare l'image (pas /var/lib/postgresql/data).
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    # « Prête » = accepte les connexions, pas seulement « conteneur démarré ».
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U stepbystep -d stepbystep']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres-data:
