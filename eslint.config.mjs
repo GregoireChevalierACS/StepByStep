@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -18,6 +19,12 @@ export default tseslint.config(
   {
     files: ['**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
+    // Fichiers de configuration et scripts exécutés par Node : process, fetch… sont des globales.
+    // (fusionné avec les options de disableTypeChecked, qu'il ne faut pas écraser).
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
+    },
   },
   {
     // Règle d'or : le domaine est du TS pur, sans framework ni infrastructure.
