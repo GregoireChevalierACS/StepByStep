@@ -46,7 +46,7 @@ La règle est vérifiée automatiquement : ESLint interdit au domaine d'importer
 
 ## Démarrer
 
-Prérequis : Node 22, pnpm 10.
+Prérequis : Node 22, pnpm 10, Docker (pour la base PostgreSQL de l'API).
 
 ```bash
 pnpm install
@@ -54,6 +54,16 @@ pnpm test            # tous les tests
 pnpm test:coverage   # tests + couverture (seuil 100 % sur le domaine)
 pnpm test:mutation   # test de mutation Stryker du domaine (~1 min)
 pnpm lint && pnpm typecheck && pnpm format:check
+```
+
+API (NestJS) avec sa base locale :
+
+```bash
+pnpm db:up                                   # PostgreSQL 18, attend qu'il soit prêt
+cp apps/api/.env.example apps/api/.env       # configuration locale (validée au démarrage)
+pnpm build && pnpm --filter @stepbystep/api start
+curl localhost:3000/v1/health                # {"status":"ok"}
+pnpm db:down
 ```
 
 ## Qualité et garde-fous
