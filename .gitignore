@@ -14,6 +14,8 @@ ios/
 # Environnement
 .env
 .env.*
+# Modèle documenté, sans secret : versionné.
+!.env.example
 
 # OS / éditeurs
 .DS_Store

@@ -56,7 +56,7 @@ Application Android de comptage de pas pour **Samsung Galaxy S22**, écrite en *
 | Règles d'architecture | ESLint `no-restricted-imports` sur le domaine (React, Expo, Drizzle, NestJS, TypeORM, `pg`), puis `dependency-cruiser` ou `eslint-plugin-boundaries` | **Empêche** le domaine d'importer l'infrastructure, mobile comme serveur |
 | CI/CD | GitHub Actions + EAS Build | Lint, tests et mutation testing à chaque push ; APK installable sans câble |
 | Serveur de synchronisation (optionnel) | NestJS + PostgreSQL + TypeORM (migrations), SQL brut pour les requêtes analytiques | Sauvegarde, multi-appareil et défis entre amis ; réutilise le domaine tel quel (voir [ADR 0002](docs/adr/0002-serveur-de-synchronisation-optionnel.md)) |
-| Tests serveur | **Jest** (outil par défaut de NestJS, transformation TS par `@swc/jest`, y compris des sources de `@stepbystep/domain`) + `supertest` + Testcontainers (PostgreSQL réel) | Contract tests des repositories et E2E de l'API contre une vraie base. Le domaine reste testé avec Vitest |
+| Tests serveur | **Vitest 4** (modèle officiel de NestJS 12, distribué en ESM) + `supertest` + Testcontainers (PostgreSQL réel) | Contract tests des repositories et E2E de l'API contre une vraie base. Un seul outil de test dans tout le monorepo (voir [ADR 0002](docs/adr/0002-serveur-de-synchronisation-optionnel.md), décision 11) |
 
 ---
 
@@ -221,7 +221,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 
 *Prérequis :* étapes 8 à 10 de la phase 1 (`dailyStepsFromReadings`, `TimeZoneHistory`, `GoalHistory`).
 
-1. `apps/api` : NestJS en TS strict, PostgreSQL via `docker compose`, configuration validée au démarrage. Tests avec **Jest**.
+1. `apps/api` : NestJS en TS strict, PostgreSQL via `docker compose`, configuration validée au démarrage. Tests avec **Vitest 4**. Le domaine est consommé comme bibliothèque compilée (`tsdown` → `dist/`), et directement depuis ses sources dans les tests (condition d'export `source`).
 2. Ajouter `@nestjs/*`, `typeorm` et `pg` aux imports interdits dans le domaine (règle ESLint existante).
 3. Modèle et **migrations TypeORM**, avec des **entités de persistance séparées du domaine** : les classes du domaine ne reçoivent aucun décorateur, des mappers testés font la traduction dans les deux sens.
    - `accounts` et `devices` (**plusieurs appareils pour un compte**, `devices.account_id`). En 8a, un compte est créé avec son premier appareil, sans authentification.

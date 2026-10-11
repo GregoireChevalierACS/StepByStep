@@ -47,10 +47,18 @@ jobs:
           --verbose
 
       - run: pnpm lint
+      # Règles d'architecture sur le graphe complet : sens des dépendances, cycles, API publique du domaine.
+      - run: pnpm lint:architecture
       - run: pnpm format:check
       - run: pnpm typecheck
       # Tests + couverture : échoue si la couverture du domaine passe sous 100 %.
       - run: pnpm test:coverage
+
+      # Compilation de production (domaine puis API) : les tests passent par les sources TypeScript,
+      # la production exécute dist/. On vérifie que la version livrée compile et démarre.
+      - run: pnpm build
+      - name: Démarrage de l'API compilée (smoke test)
+        run: pnpm smoke:api
 
       # Seuil bloquant : la commande échoue si le score de mutation du domaine passe sous 80 %.
       - name: Test de mutation du domaine (Stryker)

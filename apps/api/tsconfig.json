@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // L'API est exécutée par Node en ESM : résolution « nodenext », imports relatifs
+    // avec extension `.js` (ex. './app.module.js').
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    // Requis par l'injection de dépendances de NestJS (métadonnées des décorateurs).
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src", "vitest.config.ts"]
+}
