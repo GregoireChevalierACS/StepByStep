@@ -6,6 +6,9 @@
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,6 +22,9 @@
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.2",
+    "vitest": "^4.1.11"
   }
 }
