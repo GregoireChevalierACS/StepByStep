@@ -30,7 +30,7 @@ Architecture **hexagonale** (ports et adapters) : les dépendances pointent touj
 ```mermaid
 flowchart LR
   subgraph apps["Applications (adapters)"]
-    mobile["apps/mobile<br/>Expo · capteur Kotlin · SQLite<br/><i>prévu</i>"]
+    mobile["apps/mobile<br/>Expo · capteur Kotlin<br/><i>version minimale</i>"]
     api["apps/api<br/>NestJS · PostgreSQL<br/><i>en cours</i>"]
   end
   subgraph domain["packages/domain — TypeScript pur, 0 dépendance"]
@@ -66,6 +66,16 @@ curl localhost:3000/v1/health                # {"status":"ok"}
 pnpm db:down
 ```
 
+App mobile (Expo, dev build sur le S22) : un écran qui lit le compteur de pas matériel via un module natif Kotlin et envoie le relevé à l'API. Prérequis : JDK 17, SDK Android, téléphone associé en débogage sans fil ([ROADMAP, annexe](ROADMAP.md#8-annexe--déploiement-sans-câble-usb)).
+
+```bash
+adb connect <IP>:<PORT>                      # port affiché sur l'écran « Débogage sans fil »
+adb reverse tcp:3000 tcp:3000                # localhost:3000 du téléphone → API du PC
+pnpm --filter @stepbystep/mobile android     # compile, installe et lance Metro
+```
+
+Sous Windows, la compilation native dépasse la limite de 260 caractères des chemins : activer `LongPathsEnabled` et utiliser une CMake dont le ninja les gère (`android.cmakeVersion=4.1.2` dans `~/.gradle/gradle.properties`).
+
 ## Qualité et garde-fous
 
 | Niveau              | Outil                                                                                                                        |
@@ -91,4 +101,5 @@ Erreurs métier sous forme de `Result<T, E>` plutôt que d'exceptions, Value Obj
 | 0. Fondations (monorepo, CI, débogage sans fil)            | en partie   |
 | 1. Domaine en TDD                                          | ✅ terminée |
 | 8. Serveur de synchronisation NestJS                       | en cours    |
+| App mobile minimale (capteur Kotlin, envoi à l'API)        | ✅ terminée |
 | 2 à 5. Cas d'usage, adapters, écrans, arrière-plan mobiles | à venir     |

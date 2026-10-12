@@ -1,0 +1,31 @@
+{
+  "name": "@stepbystep/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stepbystep/domain": "workspace:*",
+    "expo": "~57.0.27",
+    "expo-dev-client": "~57.0.19",
+    "expo-file-system": "~57.0.7",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@types/react": "~19.2.2",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.2",
+    "vitest": "^4.1.11"
+  }
+}
