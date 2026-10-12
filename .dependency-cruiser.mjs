@@ -83,13 +83,15 @@ export default {
     // Les packages npm restent visibles (la flèche vers eux est vérifiée) sans être explorés.
     // Ne pas les exclure : exclure un dossier supprime aussi toutes les flèches qui y mènent.
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(dist|coverage|reports|\\.stryker-tmp)/' },
+    // android/, ios/ et .expo/ : projets natifs et fichiers générés par Expo, hors du dépôt.
+    exclude: { path: '(^|/)(dist|coverage|reports|\\.stryker-tmp|android|ios|\\.expo)/' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       // Le domaine est résolu vers ses sources (condition `source`), comme dans les tests.
+      // `react-native` : condition utilisée par Metro et par le tsconfig d'Expo (apps/mobile).
       exportsFields: ['exports'],
-      conditionNames: ['source', 'import', 'types', 'default'],
-      extensions: ['.ts', '.js', '.mjs'],
+      conditionNames: ['source', 'react-native', 'import', 'types', 'default'],
+      extensions: ['.ts', '.tsx', '.js', '.mjs'],
     },
   },
 };

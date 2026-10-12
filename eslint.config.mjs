@@ -4,7 +4,19 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/', '**/coverage/', '**/dist/', '**/reports/', '**/.stryker-tmp/'] },
+  {
+    ignores: [
+      '**/node_modules/',
+      '**/coverage/',
+      '**/dist/',
+      '**/reports/',
+      '**/.stryker-tmp/',
+      // Projets natifs et fichiers générés par Expo (npx expo run:android), hors du dépôt.
+      'apps/mobile/android/',
+      'apps/mobile/ios/',
+      'apps/mobile/.expo/',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

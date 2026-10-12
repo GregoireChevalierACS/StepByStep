@@ -1,0 +1,5 @@
+{
+  // Options strictes du dépôt, puis réglages Expo (JSX, résolution « bundler » de Metro,
+  // condition d'export « react-native »), qui l'emportent car listés en dernier.
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"]
+}
