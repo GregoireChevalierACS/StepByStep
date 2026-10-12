@@ -4,12 +4,12 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Post,
   UnprocessableEntityException,
   type HttpException,
 } from '@nestjs/common';
+import { deviceNotFoundException } from '../devices/device-not-found.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
 import {
   deviceIdParam,
@@ -27,7 +27,7 @@ import {
 const toHttpException = (error: RecordReadingsError): HttpException => {
   switch (error.kind) {
     case 'DeviceNotFound':
-      return new NotFoundException(`Appareil inconnu : ${error.deviceId}`);
+      return deviceNotFoundException(error);
     case 'ConflictingTimeZonePeriods':
       return new ConflictException(
         `Fuseaux contradictoires au même instant : ${error.timeZones.join(' et ')}`,
