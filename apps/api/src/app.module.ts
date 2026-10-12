@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { parseEnvironment } from './config/environment.js';
+import { DailyStepsModule } from './daily-steps/daily-steps.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DevicesModule } from './devices/devices.module.js';
+import { GoalsModule } from './goals/goals.module.js';
 import { HealthModule } from './health/health.module.js';
 import { ReadingsModule } from './readings/readings.module.js';
+import { StreakModule } from './streak/streak.module.js';
 
 /** Module racine : assemble les modules fonctionnels de l'API. */
 @Module({
@@ -16,6 +19,9 @@ import { ReadingsModule } from './readings/readings.module.js';
     HealthModule,
     DevicesModule,
     ReadingsModule,
+    DailyStepsModule,
+    GoalsModule,
+    StreakModule,
   ],
 })
 export class AppModule {}

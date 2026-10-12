@@ -4,12 +4,15 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Post,
   UnprocessableEntityException,
   type HttpException,
 } from '@nestjs/common';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { deviceNotFoundException, missingTimeZoneException } from '../devices/device-errors.js';
+import { recordReadingsResponse } from '../http/contract.js';
+import { ApiProblems, openApiSchema } from '../http/openapi.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
 import {
   deviceIdParam,
@@ -27,20 +30,19 @@ import {
 const toHttpException = (error: RecordReadingsError): HttpException => {
   switch (error.kind) {
     case 'DeviceNotFound':
-      return new NotFoundException(`Appareil inconnu : ${error.deviceId}`);
+      return deviceNotFoundException(error);
     case 'ConflictingTimeZonePeriods':
       return new ConflictException(
         `Fuseaux contradictoires au même instant : ${error.timeZones.join(' et ')}`,
       );
     case 'MissingTimeZone':
-      return new UnprocessableEntityException(
-        'Aucun fuseau horaire connu pour cet appareil : le transmettre au premier envoi.',
-      );
+      return missingTimeZoneException();
     case 'UnknownTimeZone':
       return new UnprocessableEntityException(`Fuseau horaire inconnu : ${error.timeZone}`);
   }
 };
 
+@ApiTags('Relevés')
 @Controller({ path: 'devices/:deviceId/readings', version: '1' })
 export class ReadingsController {
   constructor(private readonly recordReadings: RecordReadingsService) {}
@@ -50,6 +52,13 @@ export class ReadingsController {
    * n'a aucun effet. 200 et non 201 : un lot peut ne rien créer, la réponse est un compte rendu.
    */
   @Post()
+  @ApiOperation({
+    summary: 'Envoyer un lot de relevés (idempotent) et recalculer les jours touchés',
+  })
+  @ApiParam({ name: 'deviceId', schema: openApiSchema(deviceIdParam) })
+  @ApiBody({ schema: openApiSchema(recordReadingsBody) })
+  @ApiOkResponse({ schema: openApiSchema(recordReadingsResponse, 'output') })
+  @ApiProblems(400, 404, 409, 422)
   @HttpCode(HttpStatus.OK)
   async record(
     @Param('deviceId', new ZodValidationPipe(deviceIdParam)) deviceId: string,
