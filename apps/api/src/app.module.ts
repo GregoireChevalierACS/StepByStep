@@ -4,6 +4,7 @@ import { parseEnvironment } from './config/environment.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DevicesModule } from './devices/devices.module.js';
 import { HealthModule } from './health/health.module.js';
+import { ReadingsModule } from './readings/readings.module.js';
 
 /** Module racine : assemble les modules fonctionnels de l'API. */
 @Module({
@@ -14,6 +15,7 @@ import { HealthModule } from './health/health.module.js';
     DatabaseModule,
     HealthModule,
     DevicesModule,
+    ReadingsModule,
   ],
 })
 export class AppModule {}
