@@ -12,7 +12,14 @@ export interface TimeZoneChange {
   readonly since: number;
 }
 
-/** Ports de l'envoi : implémentés par l'adapter HTTP et par l'horloge de l'appareil. */
+/** Ce que l'app retient entre deux lancements pour la synchronisation. */
+export interface SyncState {
+  readonly deviceId: string;
+  /** Dernier fuseau confirmé par le serveur ; absent tant qu'aucun envoi n'a réussi. */
+  readonly lastSentTimeZone?: string;
+}
+
+/** Ports de l'envoi : API HTTP, stockage local et fuseau de l'appareil. */
 export interface ReadingSyncPorts {
   registerDevice(): Promise<string>;
   sendReadings(
@@ -20,32 +27,55 @@ export interface ReadingSyncPorts {
     readings: readonly StepCounterReading[],
     timeZoneChanges: readonly TimeZoneChange[],
   ): Promise<ApiResponse>;
+  loadState(): Promise<SyncState | undefined>;
+  saveState(state: SyncState): Promise<void>;
   currentTimeZone(): string;
 }
 
 /**
- * Envoi des relevés au serveur. L'appareil est enregistré au premier envoi, et le fuseau
- * n'est transmis qu'au premier envoi ou quand il a changé (ADR 0002, décision 6).
+ * Envoi des relevés au serveur. L'appareil est enregistré au premier envoi puis retenu entre
+ * deux lancements de l'app : tous les relevés du téléphone alimentent le même historique.
+ * Le fuseau n'est transmis qu'au premier envoi ou quand il a changé (ADR 0002, décision 6).
  *
- * Version minimale : l'identifiant de l'appareil n'est gardé qu'en mémoire (un nouvel appareil
- * à chaque lancement de l'app) et le changement de fuseau est daté du relevé qui le constate,
- * pas de l'événement Android ACTION_TIMEZONE_CHANGED.
+ * Version minimale : le changement de fuseau est daté du relevé qui le constate, pas de
+ * l'événement Android ACTION_TIMEZONE_CHANGED.
  */
 export class ReadingSync {
-  private deviceId: string | undefined;
-  private lastSentTimeZone: string | undefined;
+  private state: SyncState | undefined;
+  private loaded = false;
 
   constructor(private readonly ports: ReadingSyncPorts) {}
 
   async send(reading: StepCounterReading): Promise<ApiResponse> {
-    this.deviceId ??= await this.ports.registerDevice();
+    const state = await this.registeredState();
     const timeZone = this.ports.currentTimeZone();
     const timeZoneChanges =
-      timeZone === this.lastSentTimeZone ? [] : [{ timeZone, since: reading.takenAt }];
+      timeZone === state.lastSentTimeZone ? [] : [{ timeZone, since: reading.takenAt }];
 
-    const response = await this.ports.sendReadings(this.deviceId, [reading], timeZoneChanges);
+    const response = await this.ports.sendReadings(state.deviceId, [reading], timeZoneChanges);
     // Le fuseau n'est considéré comme connu du serveur que si l'envoi a réussi.
-    if (response.status >= 200 && response.status < 300) this.lastSentTimeZone = timeZone;
+    const succeeded = response.status >= 200 && response.status < 300;
+    if (succeeded && timeZoneChanges.length > 0) {
+      await this.save({ deviceId: state.deviceId, lastSentTimeZone: timeZone });
+    }
     return response;
+  }
+
+  /** État chargé une seule fois ; l'appareil est enregistré (et retenu) s'il ne l'est pas. */
+  private async registeredState(): Promise<SyncState> {
+    if (!this.loaded) {
+      this.state = await this.ports.loadState();
+      this.loaded = true;
+    }
+    if (this.state !== undefined) return this.state;
+    // Retenu avant tout envoi : un envoi raté ne doit pas créer un second appareil.
+    const registered = { deviceId: await this.ports.registerDevice() };
+    await this.save(registered);
+    return registered;
+  }
+
+  private async save(state: SyncState): Promise<void> {
+    await this.ports.saveState(state);
+    this.state = state;
   }
 }

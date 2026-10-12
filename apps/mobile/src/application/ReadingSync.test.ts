@@ -5,6 +5,7 @@ import {
   ReadingSync,
   type ApiResponse,
   type ReadingSyncPorts,
+  type SyncState,
   type TimeZoneChange,
 } from './ReadingSync';
 
@@ -14,13 +15,27 @@ interface SentBatch {
   readonly timeZoneChanges: readonly TimeZoneChange[];
 }
 
-/** Fake des ports : enregistre les appels, réponses et fuseau pilotables par le test. */
+/**
+ * Fake des ports : enregistre les appels ; réponses, fuseau et stockage pilotables par le
+ * test. Le stockage est un simple champ, partageable entre deux ReadingSync pour simuler un
+ * redémarrage de l'app.
+ */
 class FakePorts implements ReadingSyncPorts {
   registrations = 0;
   readonly sent: SentBatch[] = [];
   timeZone = 'Europe/Paris';
   nextStatus = 200;
   failNextRegistration = false;
+  stored: SyncState | undefined;
+
+  loadState(): Promise<SyncState | undefined> {
+    return Promise.resolve(this.stored);
+  }
+
+  saveState(state: SyncState): Promise<void> {
+    this.stored = state;
+    return Promise.resolve();
+  }
 
   registerDevice(): Promise<string> {
     if (this.failNextRegistration) {
@@ -123,5 +138,35 @@ describe('ReadingSync', () => {
 
     expect(ports.registrations).toBe(1);
     expect(ports.sent).toHaveLength(1);
+  });
+
+  it('reprend l’appareil et le fuseau retenus après un redémarrage de l’app', async () => {
+    const ports = new FakePorts();
+    await new ReadingSync(ports).send(aReading(1_000));
+
+    await new ReadingSync(ports).send(aReading(2_000));
+
+    expect(ports.registrations).toBe(1);
+    expect(ports.sent[1]).toMatchObject({ deviceId: 'device-1', timeZoneChanges: [] });
+  });
+
+  it('retient l’appareil dès son enregistrement, même si l’envoi échoue ensuite', async () => {
+    const ports = new FakePorts();
+    ports.nextStatus = 503;
+
+    await new ReadingSync(ports).send(aReading(1_000));
+
+    expect(ports.stored).toEqual({ deviceId: 'device-1' });
+  });
+
+  it('ne lit le stockage qu’au premier envoi', async () => {
+    const ports = new FakePorts();
+    const sync = new ReadingSync(ports);
+    await sync.send(aReading(1_000));
+
+    ports.stored = { deviceId: 'device-effacé' };
+    await sync.send(aReading(2_000));
+
+    expect(ports.sent[1]?.deviceId).toBe('device-1');
   });
 });
