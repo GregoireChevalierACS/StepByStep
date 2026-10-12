@@ -6,8 +6,11 @@ reports/
 
 # Expo / Android
 .expo/
-android/
-ios/
+# Projets natifs régénérés par `expo prebuild` (Continuous Native Generation). Pas `android/`
+# seul : le code Kotlin des modules locaux (apps/mobile/modules/*/android/) est versionné.
+/apps/mobile/android/
+/apps/mobile/ios/
+/apps/mobile/modules/*/android/build/
 *.apk
 *.aab
 
