@@ -1,5 +1,6 @@
 import { err, ok, type Result, StepCounterReading, TimeZonePeriod } from '@stepbystep/domain';
 import { z } from 'zod';
+import { uuidSchema } from '../http/schemas.js';
 import type { ValidationIssue } from '../http/zod-validation.pipe.js';
 
 // Limite par requête : protège le serveur des lots démesurés, et reste sous la limite de
@@ -27,7 +28,7 @@ export const recordReadingsBody = z.object({
 
 export type RecordReadingsBody = z.infer<typeof recordReadingsBody>;
 
-export const deviceIdParam = z.uuid();
+export const deviceIdParam = uuidSchema;
 
 export interface RecordReadingsInput {
   readonly readings: readonly StepCounterReading[];
