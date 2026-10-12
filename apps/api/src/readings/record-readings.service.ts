@@ -16,7 +16,7 @@ import { StepCounterReadingEntity } from '../database/entities/step-counter-read
 import { dailyStepsToRow } from '../database/mappers/daily-steps.mapper.js';
 import { readingToDomain, readingToRow } from '../database/mappers/step-counter-reading.mapper.js';
 import { periodToDomain, periodToRow } from '../database/mappers/time-zone-period.mapper.js';
-import type { DeviceNotFound } from '../devices/device-not-found.js';
+import type { DeviceNotFound, MissingTimeZone } from '../devices/device-errors.js';
 import type { UnknownTimeZone } from '../time/intl-local-calendar.js';
 import { TimeZoneHistoryCalendar } from '../time/time-zone-history-calendar.js';
 import { recalculationWindow } from './recalculation-window.js';
@@ -34,11 +34,6 @@ export interface RecordReadingsReport {
   readonly duplicates: number;
   /** Pas par jour local recalculés par ce lot. */
   readonly days: readonly { readonly day: string; readonly steps: number }[];
-}
-
-export interface MissingTimeZone {
-  readonly kind: 'MissingTimeZone';
-  readonly deviceId: string;
 }
 
 export type RecordReadingsError =

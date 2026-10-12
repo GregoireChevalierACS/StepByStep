@@ -9,7 +9,7 @@ import {
   UnprocessableEntityException,
   type HttpException,
 } from '@nestjs/common';
-import { deviceNotFoundException } from '../devices/device-not-found.js';
+import { deviceNotFoundException, missingTimeZoneException } from '../devices/device-errors.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
 import {
   deviceIdParam,
@@ -33,9 +33,7 @@ const toHttpException = (error: RecordReadingsError): HttpException => {
         `Fuseaux contradictoires au même instant : ${error.timeZones.join(' et ')}`,
       );
     case 'MissingTimeZone':
-      return new UnprocessableEntityException(
-        'Aucun fuseau horaire connu pour cet appareil : le transmettre au premier envoi.',
-      );
+      return missingTimeZoneException();
     case 'UnknownTimeZone':
       return new UnprocessableEntityException(`Fuseau horaire inconnu : ${error.timeZone}`);
   }

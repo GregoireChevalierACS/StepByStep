@@ -4,7 +4,7 @@ import { Between, DataSource } from 'typeorm';
 import { DailyStepsEntity } from '../database/entities/daily-steps.entity.js';
 import { DeviceEntity } from '../database/entities/device.entity.js';
 import { dailyStepsToDomain } from '../database/mappers/daily-steps.mapper.js';
-import type { DeviceNotFound } from '../devices/device-not-found.js';
+import type { DeviceNotFound } from '../devices/device-errors.js';
 import type { PeriodQuery } from './period.query.js';
 
 export interface DayTotal {

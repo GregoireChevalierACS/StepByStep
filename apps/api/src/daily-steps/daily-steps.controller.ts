@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { deviceNotFoundException } from '../devices/device-not-found.js';
+import { deviceNotFoundException } from '../devices/device-errors.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
 import { deviceIdParam } from '../readings/record-readings.dto.js';
 import { type DayTotal, DailyStepsService } from './daily-steps.service.js';
