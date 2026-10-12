@@ -7,17 +7,36 @@ export default defineConfig({
   resolve: { conditions: ['source', ...defaultServerConditions] },
   ssr: { resolve: { conditions: ['source', ...defaultServerConditions] } },
   test: {
-    include: ['src/**/*.test.ts'],
-    // Environnement valide pour démarrer l'application dans les tests (aucune base n'est
-    // contactée à ce stade : l'URL n'a besoin que d'être bien formée).
-    env: {
-      NODE_ENV: 'test',
-      DATABASE_URL: 'postgres://stepbystep:stepbystep@localhost:5432/stepbystep_test',
-    },
+    env: { NODE_ENV: 'test' },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/main.ts'],
+      exclude: ['src/**/*.test.ts', 'src/main.ts', 'src/database/migrate.ts', 'src/testing/**'],
     },
+    // Pyramide de tests : `pnpm test` lance les deux projets, `--project unit` les seuls
+    // tests unitaires (instantanés, sans Docker), pratique pour la boucle TDD.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.test.ts'],
+          exclude: ['src/**/*.int.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'integration',
+          include: ['src/**/*.int.test.ts'],
+          // PostgreSQL de test démarré une fois pour ce projet (Testcontainers), puis son URL
+          // est injectée dans DATABASE_URL avant chaque fichier de test.
+          globalSetup: ['src/testing/postgres.global-setup.ts'],
+          setupFiles: ['src/testing/database-url.setup.ts'],
+          // Démarrer un conteneur peut prendre plus que le délai par défaut.
+          hookTimeout: 60_000,
+        },
+      },
+    ],
   },
 });

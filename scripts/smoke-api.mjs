@@ -1,6 +1,6 @@
 // Smoke test de l'API compilée : démarre apps/api/dist/main.js comme en production,
 // attend une réponse 200 sur /v1/health, puis l'arrête. Code de sortie 0 si l'API répond.
-// Prérequis : `pnpm build`. Usage : `pnpm smoke:api` (fonctionne sous Linux et Windows).
+// Prérequis : `pnpm build` et une base PostgreSQL (`pnpm db:up`). Usage : `pnpm smoke:api` (fonctionne sous Linux et Windows).
 import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -13,8 +13,9 @@ const api = spawn(process.execPath, ['apps/api/dist/main.js'], {
     ...process.env,
     NODE_ENV: 'production',
     PORT,
-    // L'URL doit seulement être bien formée : la sonde de santé ne contacte pas la base.
-    DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://smoke:smoke@127.0.0.1:5432/smoke',
+    // Base locale de compose.yaml (`pnpm db:up`), sauf si DATABASE_URL est fournie.
+    DATABASE_URL:
+      process.env.DATABASE_URL ?? 'postgres://stepbystep:stepbystep@127.0.0.1:5432/stepbystep',
   },
   stdio: ['ignore', 'inherit', 'inherit'],
 });

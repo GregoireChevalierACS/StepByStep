@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../configure-app.js';
 
@@ -24,8 +24,13 @@ describe('GET /v1/health', () => {
     await app.close();
   });
 
-  it('répond que le service est en ligne', async () => {
-    await request(app.getHttpServer()).get('/v1/health').expect(200, { status: 'ok' });
+  it('répond que le service et sa base de données sont en ligne', async () => {
+    await request(app.getHttpServer())
+      .get('/v1/health')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ status: 'ok', info: { database: { status: 'up' } } });
+      });
   });
 
   it('n’expose pas de route sans version', async () => {

@@ -57,6 +57,8 @@ jobs:
       # Compilation de production (domaine puis API) : les tests passent par les sources TypeScript,
       # la production exécute dist/. On vérifie que la version livrée compile et démarre.
       - run: pnpm build
+      # Base PostgreSQL du compose.yaml (les tests, eux, ont leur propre base Testcontainers).
+      - run: pnpm db:up
       - name: Démarrage de l'API compilée (smoke test)
         run: pnpm smoke:api
 

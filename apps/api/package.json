@@ -10,27 +10,37 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node dist/database/migrate.js run",
+    "db:revert": "node dist/database/migrate.js revert",
+    "db:status": "node dist/database/migrate.js status"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.2",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",
+    "@nestjs/terminus": "^12.1.0",
+    "@nestjs/typeorm": "^12.0.2",
     "@stepbystep/domain": "workspace:*",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.8",
     "@nestjs/schematics": "^12.0.6",
     "@nestjs/testing": "^12.1.2",
+    "@testcontainers/postgresql": "^12.2.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.11",
     "supertest": "^7.3.1",
+    "testcontainers": "^12.2.0",
     "typescript": "~6.0.3",
     "vite": "^8.3.2",
     "vitest": "^4.1.11"
