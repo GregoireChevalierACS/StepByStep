@@ -1,4 +1,5 @@
 import { type INestApplication, VersioningType } from '@nestjs/common';
+import { setupOpenApi } from './http/openapi.js';
 import { ProblemDetailsFilter } from './http/problem-details.filter.js';
 
 /**
@@ -11,5 +12,7 @@ export const configureApp = <T extends INestApplication>(app: T): T => {
   app.enableVersioning({ type: VersioningType.URI });
   // Toutes les erreurs au format standard Problem Details (RFC 9457).
   app.useGlobalFilters(new ProblemDetailsFilter());
+  // Contrat publié en OpenAPI, généré à partir des schémas zod.
+  setupOpenApi(app);
   return app;
 };
