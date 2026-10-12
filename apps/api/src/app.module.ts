@@ -7,6 +7,7 @@ import { DevicesModule } from './devices/devices.module.js';
 import { GoalsModule } from './goals/goals.module.js';
 import { HealthModule } from './health/health.module.js';
 import { ReadingsModule } from './readings/readings.module.js';
+import { StreakModule } from './streak/streak.module.js';
 
 /** Module racine : assemble les modules fonctionnels de l'API. */
 @Module({
@@ -20,6 +21,7 @@ import { ReadingsModule } from './readings/readings.module.js';
     ReadingsModule,
     DailyStepsModule,
     GoalsModule,
+    StreakModule,
   ],
 })
 export class AppModule {}

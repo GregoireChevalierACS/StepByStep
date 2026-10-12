@@ -33,6 +33,7 @@ export type {
   InvalidTimeZone,
   TimeZonePeriodError,
 } from './model/TimeZonePeriod';
+export type { Clock } from './ports/Clock';
 export type { LocalCalendar } from './ports/LocalCalendar';
 export { bestDayOfAtLeast, streakOfAtLeast } from './services/badgeRules';
 export type { ActivityHistory } from './services/badgeRules';
