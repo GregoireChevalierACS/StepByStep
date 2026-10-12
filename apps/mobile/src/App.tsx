@@ -6,6 +6,7 @@ import { Button, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ReadingSync, type ApiResponse } from './application/ReadingSync';
 import { readStepCounter } from './infrastructure/readStepCounter';
 import { checkHealth, registerDevice, sendReadings } from './infrastructure/stepByStepApi';
+import { describeResponse } from './presentation/describeResponse';
 
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -41,7 +42,7 @@ export function App() {
     setOutput(`${formatReading(reading)}\n\nEnvoi…`);
     try {
       const response = await sync.send(reading);
-      setOutput(`${formatReading(reading)}\n\n${formatResponse(response)}`);
+      setOutput(`${formatReading(reading)}\n\n${describeResponse(response)}`);
     } catch (error) {
       setOutput(`${formatReading(reading)}\n\nEnvoi impossible : ${describe(error)}`);
     }

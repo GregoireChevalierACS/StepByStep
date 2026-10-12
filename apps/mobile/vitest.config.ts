@@ -12,9 +12,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/application/**/*.ts'],
+      include: ['src/application/**/*.ts', 'src/presentation/**/*.ts'],
       exclude: ['src/**/*.test.ts'],
-      // Les cas d'usage de l'app sont entièrement couverts : une régression fait échouer la CI.
+      // Cas d'usage et mise en forme de l'app entièrement couverts : une régression fait échouer
+      // la CI. Les écrans (.tsx) et les adapters natifs ou HTTP sont validés sur le S22.
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },
