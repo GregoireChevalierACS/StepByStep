@@ -56,22 +56,43 @@ pnpm test:mutation   # test de mutation Stryker du domaine (~1 min)
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
 
-API (NestJS) avec sa base locale :
+API (NestJS) avec sa base locale, depuis la racine du dépôt (Docker lancé) :
 
 ```bash
 pnpm db:up                                   # PostgreSQL 18, attend qu'il soit prêt
 cp apps/api/.env.example apps/api/.env       # configuration locale (validée au démarrage)
-pnpm build && pnpm --filter @stepbystep/api start
-curl localhost:3000/v1/health                # {"status":"ok"}
-pnpm db:down
+pnpm build                                   # domaine + API
+pnpm db:migrate                              # applique les migrations (ou « Base à jour »)
+cd apps/api
+node --env-file=.env dist/main.js            # API sur le port 3000
 ```
 
-App mobile (Expo, dev build sur le S22) : un écran qui lit le compteur de pas matériel via un module natif Kotlin et envoie le relevé à l'API. Prérequis : JDK 17, SDK Android, téléphone associé en débogage sans fil ([ROADMAP, annexe](ROADMAP.md#8-annexe--déploiement-sans-câble-usb)).
+L'API occupe ce terminal : la suite se fait dans un autre, à la racine du dépôt. Vérification : <http://localhost:3000/v1/health> répond `"status":"ok"`, et le contrat est consultable sur <http://localhost:3000/v1/docs> (Swagger UI). Pour tout arrêter : `Ctrl+C` puis `pnpm db:down`.
+
+App mobile (Expo, dev build sur le S22) : un écran qui lit le compteur de pas matériel via un module natif Kotlin et envoie le relevé à l'API. Prérequis : JDK 17, SDK Android, débogage sans fil activé sur le téléphone ([ROADMAP, annexe](ROADMAP.md#8-annexe--déploiement-sans-câble-usb)). `<IP>:<PORT>` est l'adresse affichée sur l'écran « Débogage sans fil » ; le port change à chaque réactivation.
 
 ```bash
-adb connect <IP>:<PORT>                      # port affiché sur l'écran « Débogage sans fil »
-adb reverse tcp:3000 tcp:3000                # localhost:3000 du téléphone → API du PC
-pnpm --filter @stepbystep/mobile android     # compile, installe et lance Metro
+adb connect <IP>:<PORT>
+adb -s <IP>:<PORT> reverse tcp:3000 tcp:3000      # localhost:3000 du téléphone → API du PC
+adb -s <IP>:<PORT> reverse tcp:8081 tcp:8081      # Metro (bundler JS)
+adb -s <IP>:<PORT> reverse --list                 # contrôle : les deux redirections doivent apparaître
+pnpm --filter @stepbystep/mobile start            # lance Metro ; ouvrir ensuite l'app sur le téléphone
+```
+
+`-s` cible le téléphone par son adresse : ADB le voit souvent une seconde fois, découvert automatiquement (mDNS), et refuse alors toute commande sans `-s` (« more than one device »).
+
+Selon les cas :
+
+| Situation                                                         | Commande                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `adb connect` échoue (« failed to connect ») : association perdue | Sur le téléphone, « Associer l'appareil avec un code d'association », puis `adb pair <IP>:<PORT_D_ASSOCIATION> <CODE>` et de nouveau `adb connect <IP>:<PORT>`                                                           |
+| App pas encore installée (ou module natif modifié)                | `pnpm --filter @stepbystep/mobile android` : compile, installe et lance Metro. Si le téléphone apparaît deux fois dans `adb devices`, déconnecter d'abord l'entrée mDNS : `adb disconnect "<nom>._adb-tls-connect._tcp"` |
+| L'app affiche 404 « Appareil inconnu » (base réinitialisée)       | `adb -s <IP>:<PORT> shell pm clear com.stepbystep.app` : l'app oublie son appareil et s'enregistre de nouveau au prochain envoi                                                                                          |
+
+Vérifier en base les derniers relevés reçus :
+
+```bash
+docker compose exec postgres psql -U stepbystep -d stepbystep -c "SELECT device_id, taken_at, boot_count, steps_since_boot, received_at FROM step_counter_readings ORDER BY received_at DESC LIMIT 5;"
 ```
 
 Sous Windows, la compilation native dépasse la limite de 260 caractères des chemins : activer `LongPathsEnabled` et utiliser une CMake dont le ninja les gère (`android.cmakeVersion=4.1.2` dans `~/.gradle/gradle.properties`).
