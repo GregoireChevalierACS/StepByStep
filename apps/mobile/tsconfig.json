@@ -1,5 +1,7 @@
 {
   // Options strictes du dépôt, puis réglages Expo (JSX, résolution « bundler » de Metro,
   // condition d'export « react-native »), qui l'emportent car listés en dernier.
-  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"]
+  // Extension explicite : depuis le SDK 58, le champ `exports` d'expo associe un chemin sans
+  // extension à un fichier .js, et le résolveur de tsconfig de Vite ne trouverait pas le .json.
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base.json"]
 }
