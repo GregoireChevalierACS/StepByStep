@@ -25,9 +25,8 @@ export async function loadSyncState(): Promise<SyncState | undefined> {
     : { deviceId: data['deviceId'] };
 }
 
-export function saveSyncState(state: SyncState): Promise<void> {
+export async function saveSyncState(state: SyncState): Promise<void> {
   const file = stateFile();
   if (!file.exists) file.create();
-  file.write(JSON.stringify(state));
-  return Promise.resolve();
+  await file.write(JSON.stringify(state));
 }
