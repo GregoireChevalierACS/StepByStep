@@ -8,6 +8,11 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
+      # Un SDK Expo fixe les versions de React, React Native et des modules expo-* : montés
+      # séparément, ils sont incompatibles (la CI échoue). Une seule PR pour tout le SDK, à
+      # compléter par `npx expo install --fix`. Placé avant « outillage » pour @types/react.
+      expo-sdk:
+        patterns: [expo, expo-*, react, react-native, '@types/react']
       # Une seule PR pour les mises à jour mineures et correctives des outils de dev.
       outillage:
         dependency-type: development
@@ -20,6 +25,9 @@ updates:
         update-types: [version-update:semver-major]
       # typescript-eslint 8 ne supporte pas encore TypeScript 7.
       - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Le SDK Expo attend Babel 7 (`expo install --check`) ; il passera à Babel 8 de lui-même.
+      - dependency-name: '@babel/core'
         update-types: [version-update:semver-major]
 
   # Versions des actions utilisées dans les workflows GitHub.
