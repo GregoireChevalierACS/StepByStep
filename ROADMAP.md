@@ -179,7 +179,7 @@ Ordre suggéré des tests, du plus simple au plus riche :
 ### Phase 3 : adapters d'infrastructure (1 semaine)
 
 1. `SqliteStepRepository` + migrations Drizzle, avec les contract tests.
-2. `NativeStepCounterReader` : module natif Expo en Kotlin, réduit au strict minimum (Humble Object). Il s'abonne à `TYPE_STEP_COUNTER`, renvoie la première valeur reçue et se désabonne. Seul le mapper côté TS est testé unitairement ; le Kotlin est validé sur le S22.
+2. `NativeStepCounterReader` : module natif Expo en Kotlin, réduit au strict minimum (Humble Object). Il s'abonne à `TYPE_STEP_COUNTER`, demande un `flush` au capteur et renvoie la valeur la plus récente reçue à `onFlushCompleted`, puis se désabonne. Piège constaté sur le S22 : le compteur est tenu par une puce basse consommation qui transmet les pas par paquets (*batching*) ; la première valeur reçue à l'abonnement est la dernière transmise à Android, parfois vieille de plusieurs minutes, et le compteur semblait figé. Seul le mapper côté TS est testé unitairement ; le Kotlin est validé sur le S22.
 3. `PedometerStepSource` (temps réel) en Observer.
 4. `MergedStepSource` (Composite) : historique SQLite + capteur live, avec dédoublonnage testé.
 5. Machine d'états des permissions (State) + écran d'explication.
