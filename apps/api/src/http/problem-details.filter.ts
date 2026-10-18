@@ -61,9 +61,14 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const detail =
       isRecord(body) && typeof body['message'] === 'string' ? body['message'] : exception.message;
     const errors = isRecord(body) ? body['errors'] : undefined;
+    // Une erreur peut déclarer son propre type de problème (RFC 9457, § 3.1.1) : un identifiant
+    // stable que le client teste, au lieu du statut ou du texte de `detail`. Son titre va avec.
+    // Sinon, `about:blank`, dont le titre est par définition le libellé du statut HTTP.
+    const type = isRecord(body) && typeof body['type'] === 'string' ? body['type'] : undefined;
+    const title = isRecord(body) && typeof body['title'] === 'string' ? body['title'] : undefined;
     return {
-      type: 'about:blank',
-      title: STATUS_CODES[status] ?? 'Error',
+      type: type ?? 'about:blank',
+      title: (type === undefined ? undefined : title) ?? STATUS_CODES[status] ?? 'Error',
       status,
       detail,
       instance,

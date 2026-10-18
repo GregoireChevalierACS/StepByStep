@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../configure-app.js';
+import { DEVICE_NOT_FOUND_PROBLEM_TYPE } from '../devices/device-errors.js';
 
 type App = Parameters<typeof request>[0];
 
@@ -101,12 +102,15 @@ describe('POST /v1/devices/:deviceId/readings', () => {
       await send('pas-un-uuid', batch).expect(400);
     });
 
-    it('404 pour un appareil inconnu', async () => {
+    it('404 pour un appareil inconnu, avec un type de problème que le client peut tester', async () => {
       const response = await send('00000000-0000-4000-8000-000000000000', batch).expect(404);
 
-      // Le message prouve que la route existe et que c'est bien l'appareil qui est inconnu.
+      // Le type prouve que la route existe et que c'est bien l'appareil qui est inconnu ; c'est
+      // lui, pas le texte de `detail`, que l'app teste pour réenregistrer l'appareil.
       expect(response.body).toMatchObject({
-        detail: expect.stringContaining('Appareil inconnu') as string,
+        type: DEVICE_NOT_FOUND_PROBLEM_TYPE,
+        title: 'Appareil inconnu',
+        detail: expect.stringContaining('00000000-0000-4000-8000-000000000000') as string,
       });
     });
 

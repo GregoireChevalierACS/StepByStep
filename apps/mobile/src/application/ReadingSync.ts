@@ -6,6 +6,20 @@ export interface ApiResponse {
   readonly body: unknown;
 }
 
+/**
+ * Type de problème (RFC 9457) que renvoie l'API pour un appareil qu'elle ne connaît pas
+ * (voir docs/problems.md). C'est lui qui est testé, pas le statut 404 seul.
+ */
+export const UNKNOWN_DEVICE_PROBLEM_TYPE =
+  'https://github.com/GregoireChevalierACS/StepByStep/blob/main/docs/problems.md#device-not-found';
+
+const isUnknownDevice = ({ status, body }: ApiResponse): boolean =>
+  status === 404 &&
+  typeof body === 'object' &&
+  body !== null &&
+  'type' in body &&
+  body.type === UNKNOWN_DEVICE_PROBLEM_TYPE;
+
 /** Nouvelle période de fuseau de l'appareil (identifiant IANA + instant epoch ms de début). */
 export interface TimeZoneChange {
   readonly timeZone: string;
@@ -47,7 +61,15 @@ export class ReadingSync {
   constructor(private readonly ports: ReadingSyncPorts) {}
 
   async send(reading: StepCounterReading): Promise<ApiResponse> {
-    const state = await this.registeredState();
+    const response = await this.sendAs(await this.registeredState(), reading);
+    if (!isUnknownDevice(response)) return response;
+    // Le serveur ne connaît plus l'appareil (base réinitialisée) : on en enregistre un nouveau
+    // et on renvoie le relevé, avec le fuseau. Sans risque, l'envoi est idempotent. Une seule
+    // fois : si le nouvel appareil est inconnu lui aussi, le problème est ailleurs.
+    return this.sendAs(await this.register(), reading);
+  }
+
+  private async sendAs(state: SyncState, reading: StepCounterReading): Promise<ApiResponse> {
     const timeZone = this.ports.currentTimeZone();
     const timeZoneChanges =
       timeZone === state.lastSentTimeZone ? [] : [{ timeZone, since: reading.takenAt }];
@@ -67,8 +89,11 @@ export class ReadingSync {
       this.state = await this.ports.loadState();
       this.loaded = true;
     }
-    if (this.state !== undefined) return this.state;
-    // Retenu avant tout envoi : un envoi raté ne doit pas créer un second appareil.
+    return this.state ?? this.register();
+  }
+
+  /** Enregistre un appareil, retenu avant tout envoi : un envoi raté n'en crée pas un second. */
+  private async register(): Promise<SyncState> {
     const registered = { deviceId: await this.ports.registerDevice() };
     await this.save(registered);
     return registered;
