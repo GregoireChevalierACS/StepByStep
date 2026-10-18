@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ReadingSync,
+  UNKNOWN_DEVICE_PROBLEM_TYPE,
   type ApiResponse,
   type ReadingSyncPorts,
   type SyncState,
@@ -25,8 +26,13 @@ class FakePorts implements ReadingSyncPorts {
   readonly sent: SentBatch[] = [];
   timeZone = 'Europe/Paris';
   nextStatus = 200;
+  nextBody: unknown = null;
   failNextRegistration = false;
   stored: SyncState | undefined;
+  /** Appareils que le serveur ne connaît pas (base réinitialisée) : 404 « appareil inconnu ». */
+  readonly unknownDevices = new Set<string>();
+  /** Serveur qui ne connaît aucun appareil, même tout juste enregistré. */
+  forgetsEveryDevice = false;
 
   loadState(): Promise<SyncState | undefined> {
     return Promise.resolve(this.stored);
@@ -52,7 +58,13 @@ class FakePorts implements ReadingSyncPorts {
     timeZoneChanges: readonly TimeZoneChange[],
   ): Promise<ApiResponse> {
     this.sent.push({ deviceId, readings, timeZoneChanges });
-    return Promise.resolve({ status: this.nextStatus, body: null });
+    if (this.forgetsEveryDevice || this.unknownDevices.has(deviceId)) {
+      return Promise.resolve({
+        status: 404,
+        body: { type: UNKNOWN_DEVICE_PROBLEM_TYPE, status: 404, detail: 'Appareil inconnu' },
+      });
+    }
+    return Promise.resolve({ status: this.nextStatus, body: this.nextBody });
   }
 
   currentTimeZone(): string {
@@ -168,5 +180,51 @@ describe('ReadingSync', () => {
     await sync.send(aReading(2_000));
 
     expect(ports.sent[1]?.deviceId).toBe('device-1');
+  });
+
+  describe('appareil inconnu du serveur (base réinitialisée)', () => {
+    it('enregistre un nouvel appareil et lui renvoie le relevé, avec le fuseau', async () => {
+      const ports = new FakePorts();
+      ports.stored = { deviceId: 'device-perdu', lastSentTimeZone: 'Europe/Paris' };
+      ports.unknownDevices.add('device-perdu');
+      const reading = aReading(1_000);
+
+      const response = await new ReadingSync(ports).send(reading);
+
+      expect(response.status).toBe(200);
+      expect(ports.sent).toEqual([
+        { deviceId: 'device-perdu', readings: [reading], timeZoneChanges: [] },
+        {
+          deviceId: 'device-1',
+          readings: [reading],
+          timeZoneChanges: [{ timeZone: 'Europe/Paris', since: 1_000 }],
+        },
+      ]);
+      expect(ports.stored).toEqual({ deviceId: 'device-1', lastSentTimeZone: 'Europe/Paris' });
+    });
+
+    it('ne réagit pas à une 404 d’un autre type (route ou adresse du serveur erronée)', async () => {
+      const ports = new FakePorts();
+      // Ce que renvoie l'API pour une route qui n'existe pas : une 404 Problem Details générique.
+      ports.nextStatus = 404;
+      ports.nextBody = { type: 'about:blank', title: 'Not Found', status: 404 };
+
+      const response = await new ReadingSync(ports).send(aReading(1_000));
+
+      expect(response.status).toBe(404);
+      expect(ports.registrations).toBe(1);
+      expect(ports.sent).toHaveLength(1);
+    });
+
+    it('ne réessaie qu’une fois si le nouvel appareil est inconnu lui aussi', async () => {
+      const ports = new FakePorts();
+      ports.forgetsEveryDevice = true;
+
+      const response = await new ReadingSync(ports).send(aReading(1_000));
+
+      expect(response.status).toBe(404);
+      expect(ports.registrations).toBe(2);
+      expect(ports.sent).toHaveLength(2);
+    });
   });
 });
