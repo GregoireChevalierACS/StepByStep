@@ -1,4 +1,4 @@
-import { type ArgumentsHost, BadRequestException, Logger } from '@nestjs/common';
+import { type ArgumentsHost, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type ProblemDetails, ProblemDetailsFilter } from './problem-details.filter.js';
 
@@ -70,6 +70,27 @@ describe('ProblemDetailsFilter', () => {
       detail: 'Requête invalide',
       instance: '/v1/devices/x/readings',
       errors,
+    });
+  });
+
+  it('reprend le type et le titre d’une erreur qui déclare son propre type de problème', () => {
+    const { host, sent } = fakeHttp('/v1/devices/x/readings');
+
+    new ProblemDetailsFilter().catch(
+      new NotFoundException({
+        type: 'https://example.org/problems/device-not-found',
+        title: 'Appareil inconnu',
+        message: 'Appareil inconnu : x',
+      }),
+      host,
+    );
+
+    expect(sent.body).toEqual({
+      type: 'https://example.org/problems/device-not-found',
+      title: 'Appareil inconnu',
+      status: 404,
+      detail: 'Appareil inconnu : x',
+      instance: '/v1/devices/x/readings',
     });
   });
 });
