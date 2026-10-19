@@ -233,7 +233,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 5. `POST /v1/devices/:id/readings` : envoi par lots des relevés **et des changements de fuseau survenus depuis le dernier envoi**. Le fuseau n'est envoyé que lorsqu'il change (le téléphone l'enregistre sur l'événement Android `ACTION_TIMEZONE_CHANGED`). **Idempotent** (`ON CONFLICT DO NOTHING`) et tolérant au retard et au désordre : les jours touchés, y compris ceux des relevés voisins, sont recalculés avec `dailyStepsFromReadings` dans une transaction, chaque relevé étant interprété avec le fuseau en vigueur à son instant.
 6. `PUT /v1/accounts/:id/goal` (ajoute une entrée à l'historique, `UPSERT` par jour), `GET /v1/devices/:id/daily-steps?from&to` (366 jours au plus) et `GET /v1/devices/:id/streak` (`computeStreak` + `GoalHistory` + badges ; « aujourd'hui » selon le fuseau de l'appareil, via un port `Clock`). *Série par appareil et non par compte : la règle d'agrégation multi-appareils n'est pas encore décidée (point 1 de 8b).*
 7. Validation des requêtes par **zod** (une seule bibliothèque de validation, déjà utilisée pour la configuration) plutôt que `class-validator`. Validation à trois niveaux : structure (zod, `400`), règles métier (domaine, `422`), état (cas d'usage, `404`/`409`). Erreurs au format **Problem Details** (RFC 9457). Documentation OpenAPI (`@nestjs/swagger`, `/v1/docs`) **générée à partir des schémas zod**, et test de contrat qui vérifie que chaque réponse réelle respecte le schéma publié.
-8. Tests : cas d'usage avec des Fakes, **contract tests** du repository (`InMemory` et PostgreSQL via Testcontainers), E2E `supertest` avec le scénario « relevés en double, dans le désordre, redémarrage au milieu, changement de fuseau ».
+8. Tests : cas d'usage avec des Fakes, **contract tests** du repository (`InMemory` et PostgreSQL via Testcontainers), E2E `supertest` avec le scénario « relevés en double, dans le désordre, redémarrage au milieu, changement de fuseau » ([sync-scenario.int.test.ts](apps/api/src/e2e/sync-scenario.int.test.ts) : fait ; les repositories derrière des ports et leurs contract tests restent à faire).
 9. CI : tests serveur dans GitHub Actions (Docker disponible sur `ubuntu-latest`).
 
 **8b : extensions, par ordre de priorité**
@@ -247,7 +247,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 7. Bilan mensuel en PDF stocké sur S3.
 8. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
 
-✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage + changement de fuseau » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI `/v1` est consultable.
+✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage + changement de fuseau » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI `/v1` est consultable. *Atteint le 2026-10-18.*
 
 **Durée totale estimée :** 5 à 7 semaines à temps partiel, hors phases 6 et 8.
 
