@@ -42,6 +42,8 @@ export type { Badge } from './services/badges';
 export { computeStreak } from './services/computeStreak';
 export { dailyStepsFromReadings } from './services/dailyStepsFromReadings';
 export { distributeStepsByDay } from './services/distributeStepsByDay';
+export { goalsReached } from './services/goalsReached';
+export type { GoalReached } from './services/goalsReached';
 export { FixedStrideLength, HeightBasedStrideLength } from './services/StrideLengthStrategy';
 export type { StrideLengthStrategy } from './services/StrideLengthStrategy';
 export type { DailySteps, ReadingsOutOfOrder } from './services/distributeStepsByDay';
