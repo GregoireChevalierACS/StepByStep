@@ -1,10 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { err, ok, type Result } from '@stepbystep/domain';
-import { Between, DataSource } from 'typeorm';
-import { DailyStepsEntity } from '../database/entities/daily-steps.entity.js';
-import { DeviceEntity } from '../database/entities/device.entity.js';
-import { dailyStepsToDomain } from '../database/mappers/daily-steps.mapper.js';
+import { Inject, Injectable } from '@nestjs/common';
+import { err, LocalDate, ok, type Result } from '@stepbystep/domain';
 import type { DeviceNotFound } from '../devices/device-errors.js';
+import { DEVICE_REPOSITORY, type DeviceRepository } from '../devices/device.repository.js';
+import { DAILY_STEPS_REPOSITORY, type DailyStepsRepository } from './daily-steps.repository.js';
 import type { PeriodQuery } from './period.query.js';
 
 export interface DayTotal {
@@ -12,30 +10,29 @@ export interface DayTotal {
   readonly steps: number;
 }
 
+// La période a déjà été validée par le schéma de la requête : un échec ici est un bug interne.
+const localDate = (value: string): LocalDate => {
+  const date = LocalDate.create(value);
+  if (!date.ok) throw new Error(`Jour invalide après validation : ${value}`);
+  return date.value;
+};
+
 /** Lecture de la projection des pas par jour d'un appareil, sur une période. */
 @Injectable()
 export class DailyStepsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    @Inject(DEVICE_REPOSITORY) private readonly devices: DeviceRepository,
+    @Inject(DAILY_STEPS_REPOSITORY) private readonly dailySteps: DailyStepsRepository,
+  ) {}
 
   async read(
     deviceId: string,
     { from, to }: PeriodQuery,
   ): Promise<Result<DayTotal[], DeviceNotFound>> {
-    if (!(await this.dataSource.getRepository(DeviceEntity).existsBy({ id: deviceId }))) {
+    if (!(await this.devices.exists(deviceId))) {
       return err({ kind: 'DeviceNotFound', deviceId });
     }
-    const rows = await this.dataSource.getRepository(DailyStepsEntity).find({
-      where: { deviceId, day: Between(from, to) },
-      order: { day: 'ASC' },
-    });
-    // Chaque ligne relue repasse par le domaine : une donnée corrompue n'est pas renvoyée.
-    return ok(
-      rows.map((row) => {
-        const daily = dailyStepsToDomain(row);
-        if (!daily.ok)
-          throw new Error(`Donnée enregistrée invalide : ${JSON.stringify(daily.error)}`);
-        return { day: daily.value.date.toString(), steps: daily.value.steps.value };
-      }),
-    );
+    const days = await this.dailySteps.between(deviceId, localDate(from), localDate(to));
+    return ok(days.map(({ date, steps }) => ({ day: date.toString(), steps: steps.value })));
   }
 }
