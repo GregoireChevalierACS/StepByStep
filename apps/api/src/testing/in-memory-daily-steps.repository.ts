@@ -13,9 +13,18 @@ export class InMemoryDailyStepsRepository implements DailyStepsRepository {
   }
 
   between(deviceId: string, from: LocalDate, to: LocalDate): Promise<DailySteps[]> {
-    const days = [...(this.days.get(deviceId)?.values() ?? [])]
-      .filter(({ date }) => date.compareTo(from) >= 0 && date.compareTo(to) <= 0)
-      .sort((a, b) => a.date.compareTo(b.date));
-    return Promise.resolve(days);
+    return Promise.resolve(
+      this.sorted(deviceId).filter(
+        ({ date }) => date.compareTo(from) >= 0 && date.compareTo(to) <= 0,
+      ),
+    );
+  }
+
+  upTo(deviceId: string, to: LocalDate): Promise<DailySteps[]> {
+    return Promise.resolve(this.sorted(deviceId).filter(({ date }) => date.compareTo(to) <= 0));
+  }
+
+  private sorted(deviceId: string): DailySteps[] {
+    return [...(this.days.get(deviceId)?.values() ?? [])].sort((a, b) => a.date.compareTo(b.date));
   }
 }

@@ -21,4 +21,9 @@ export class TypeOrmDeviceRepository implements DeviceRepository {
   exists(deviceId: string): Promise<boolean> {
     return this.dataSource.getRepository(DeviceEntity).existsBy({ id: deviceId });
   }
+
+  async accountOf(deviceId: string): Promise<string | undefined> {
+    const device = await this.dataSource.getRepository(DeviceEntity).findOneBy({ id: deviceId });
+    return device?.accountId;
+  }
 }

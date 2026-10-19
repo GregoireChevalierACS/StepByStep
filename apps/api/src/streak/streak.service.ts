@@ -3,24 +3,26 @@ import {
   type Clock,
   computeStreak,
   DailyActivity,
+  DailyGoal,
   err,
+  type GoalChange,
   GoalHistory,
+  type LocalDate,
   ok,
   type Result,
   TimeZoneHistory,
   unlockedBadges,
 } from '@stepbystep/domain';
-import { DataSource, LessThanOrEqual } from 'typeorm';
-import { DailyGoalEntity } from '../database/entities/daily-goal.entity.js';
-import { DailyStepsEntity } from '../database/entities/daily-steps.entity.js';
-import { DeviceTimeZoneEntity } from '../database/entities/device-time-zone.entity.js';
-import { DeviceEntity } from '../database/entities/device.entity.js';
-import { dailyStepsToDomain } from '../database/mappers/daily-steps.mapper.js';
-import { goalChangeToDomain } from '../database/mappers/goal-change.mapper.js';
-import { periodToDomain } from '../database/mappers/time-zone-period.mapper.js';
+import {
+  DAILY_STEPS_REPOSITORY,
+  type DailyStepsRepository,
+} from '../daily-steps/daily-steps.repository.js';
 import type { DeviceNotFound, MissingTimeZone } from '../devices/device-errors.js';
+import { DEVICE_REPOSITORY, type DeviceRepository } from '../devices/device.repository.js';
+import { GOAL_REPOSITORY, type GoalRepository } from '../goals/goal.repository.js';
 import type { UnknownTimeZone } from '../time/intl-local-calendar.js';
 import { TimeZoneHistoryCalendar } from '../time/time-zone-history-calendar.js';
+import { TIME_ZONE_REPOSITORY, type TimeZoneRepository } from '../time/time-zone.repository.js';
 import { CLOCK } from './clock.js';
 
 /** Objectif appliqué tant que le compte n'en a fixé aucun (la référence courante). */
@@ -48,32 +50,28 @@ export type StreakError = DeviceNotFound | MissingTimeZone | UnknownTimeZone;
 @Injectable()
 export class StreakService {
   constructor(
-    private readonly dataSource: DataSource,
+    @Inject(DEVICE_REPOSITORY) private readonly devices: DeviceRepository,
+    @Inject(TIME_ZONE_REPOSITORY) private readonly timeZones: TimeZoneRepository,
+    @Inject(DAILY_STEPS_REPOSITORY) private readonly dailySteps: DailyStepsRepository,
+    @Inject(GOAL_REPOSITORY) private readonly goals: GoalRepository,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async compute(deviceId: string): Promise<Result<StreakReport, StreakError>> {
-    const device = await this.dataSource.getRepository(DeviceEntity).findOneBy({ id: deviceId });
-    if (!device) return err({ kind: 'DeviceNotFound', deviceId });
+    const accountId = await this.devices.accountOf(deviceId);
+    if (accountId === undefined) return err({ kind: 'DeviceNotFound', deviceId });
 
     // « Aujourd'hui » : la date locale de maintenant, dans le fuseau en vigueur de l'appareil.
-    const periods = (
-      await this.dataSource.getRepository(DeviceTimeZoneEntity).findBy({ deviceId })
-    ).map((row) => this.valid(periodToDomain(row)));
+    const periods = await this.timeZones.periodsOf(deviceId);
     if (periods.length === 0) return err({ kind: 'MissingTimeZone', deviceId });
-    const calendar = TimeZoneHistoryCalendar.for(this.valid(TimeZoneHistory.from(periods)));
+    const calendar = TimeZoneHistoryCalendar.for(this.consistent(TimeZoneHistory.from(periods)));
     if (!calendar.ok) return calendar;
     const today = calendar.value.dateOf(this.clock.now());
 
-    const goals = await this.goalHistory(device.accountId, today.toString());
-    const rows = await this.dataSource.getRepository(DailyStepsEntity).find({
-      where: { deviceId, day: LessThanOrEqual(today.toString()) },
-      order: { day: 'ASC' },
-    });
-    const days = rows.map((row) => {
-      const { date, steps } = this.valid(dailyStepsToDomain(row));
-      return DailyActivity.start(date, goals.goalOn(date)).addSteps(steps);
-    });
+    const goals = await this.goalHistory(accountId, today);
+    const days = (await this.dailySteps.upTo(deviceId, today)).map(({ date, steps }) =>
+      DailyActivity.start(date, goals.goalOn(date)).addSteps(steps),
+    );
 
     return ok({
       today: today.toString(),
@@ -87,27 +85,19 @@ export class StreakService {
   }
 
   /** Historique des objectifs du compte, ou l'objectif par défaut s'il n'en a fixé aucun. */
-  private async goalHistory(accountId: string, today: string): Promise<GoalHistory> {
-    const rows = await this.dataSource.getRepository(DailyGoalEntity).findBy({ accountId });
-    const changes =
-      rows.length > 0
-        ? rows.map((row) => this.valid(goalChangeToDomain(row)))
-        : [
-            this.valid(
-              goalChangeToDomain({
-                accountId,
-                effectiveFrom: today,
-                goalSteps: DEFAULT_DAILY_GOAL,
-              }),
-            ),
-          ];
-    return this.valid(GoalHistory.from(changes));
+  private async goalHistory(accountId: string, today: LocalDate): Promise<GoalHistory> {
+    const changes = await this.goals.changesOf(accountId);
+    const defaultChange: GoalChange = {
+      effectiveFrom: today,
+      goal: this.consistent(DailyGoal.create(DEFAULT_DAILY_GOAL)),
+    };
+    return this.consistent(GoalHistory.from(changes.length > 0 ? changes : [defaultChange]));
   }
 
-  /** Une donnée relue invalide est une incohérence : erreur serveur explicite. */
-  private valid<T>(result: Result<T, unknown>): T {
+  /** Données enregistrées incohérentes (impossible si la persistance respecte son contrat). */
+  private consistent<T>(result: Result<T, unknown>): T {
     if (!result.ok) {
-      throw new Error(`Donnée enregistrée invalide : ${JSON.stringify(result.error)}`);
+      throw new Error(`Donnée enregistrée incohérente : ${JSON.stringify(result.error)}`);
     }
     return result.value;
   }

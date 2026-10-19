@@ -3,6 +3,7 @@ import type { DeviceRepository, RegisteredDevice } from '../devices/device.repos
 
 /** Adapter en mémoire de DeviceRepository, pour les tests unitaires (tenu par le contrat). */
 export class InMemoryDeviceRepository implements DeviceRepository {
+  /** Appareil → compte. */
   private readonly devices = new Map<string, string>();
 
   registerWithNewAccount(): Promise<RegisteredDevice> {
@@ -13,5 +14,14 @@ export class InMemoryDeviceRepository implements DeviceRepository {
 
   exists(deviceId: string): Promise<boolean> {
     return Promise.resolve(this.devices.has(deviceId));
+  }
+
+  accountOf(deviceId: string): Promise<string | undefined> {
+    return Promise.resolve(this.devices.get(deviceId));
+  }
+
+  /** Comptes créés avec les appareils : partagés avec InMemoryAccountRepository. */
+  hasAccount(accountId: string): boolean {
+    return [...this.devices.values()].includes(accountId);
   }
 }

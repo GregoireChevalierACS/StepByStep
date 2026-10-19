@@ -12,6 +12,8 @@ export interface DeviceRepository {
   /** Crée un compte et son premier appareil, atomiquement : jamais de compte sans appareil. */
   registerWithNewAccount(): Promise<RegisteredDevice>;
   exists(deviceId: string): Promise<boolean>;
+  /** Compte de l'appareil ; `undefined` pour un appareil inconnu. */
+  accountOf(deviceId: string): Promise<string | undefined>;
 }
 
 /** Jeton d'injection NestJS : une interface TypeScript n'existe plus à l'exécution. */

@@ -51,6 +51,23 @@ export const dailyStepsRepositoryContract = (fixture: () => DailyStepsRepository
     expect(asPlain(days)).toEqual([{ day: '2026-10-05', steps: 500 }]);
   });
 
+  it('renvoie tous les jours jusqu’à une date incluse, triés par jour', async () => {
+    const { repository, givenDevice, givenDays } = fixture();
+    const deviceId = await givenDevice();
+    await givenDays(deviceId, [
+      day('2026-10-07', 700),
+      day('2026-09-01', 100),
+      day('2026-10-08', 800),
+    ]);
+
+    const days = await repository.upTo(deviceId, date('2026-10-07'));
+
+    expect(asPlain(days)).toEqual([
+      { day: '2026-09-01', steps: 100 },
+      { day: '2026-10-07', steps: 700 },
+    ]);
+  });
+
   it('renvoie une liste vide quand aucun jour n’est enregistré sur la période', async () => {
     const { repository, givenDevice } = fixture();
     const deviceId = await givenDevice();
