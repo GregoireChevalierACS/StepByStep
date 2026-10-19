@@ -43,6 +43,16 @@ export default {
       to: { path: DOMAIN_SOURCES, pathNot: `${DOMAIN_SOURCES}index\\.ts$` },
     },
     {
+      name: 'persistance-dans-les-adapters',
+      comment:
+        'Seuls les adapters de apps/api/src/database/ parlent à la base (TypeORM, driver pg) : les ' +
+        'cas d’usage dépendent de ports, et changer de technique de persistance ne les touche pas. ' +
+        'Les tests restent libres de préparer la base directement.',
+      severity: 'error',
+      from: { path: '^apps/api/src/', pathNot: ['^apps/api/src/database/', TEST_FILES] },
+      to: { path: 'node_modules/(typeorm|@nestjs/typeorm|pg)/' },
+    },
+    {
       name: 'pas-de-cycle',
       comment:
         'Un cycle rend les modules indissociables : impossibles à comprendre et à tester seuls.',
@@ -84,7 +94,12 @@ export default {
     // Ne pas les exclure : exclure un dossier supprime aussi toutes les flèches qui y mènent.
     doNotFollow: { path: 'node_modules' },
     // android/, ios/ et .expo/ : projets natifs et fichiers générés par Expo, hors du dépôt.
-    exclude: { path: '(^|/)(dist|coverage|reports|\\.stryker-tmp|android|ios|\\.expo)/' },
+    // Ancré sur les dossiers des apps et packages : beaucoup de packages npm ont leur point
+    // d'entrée dans un dossier dist/, et un motif non ancré effaçait toutes les flèches vers eux
+    // (@nestjs/typeorm était invisible : les règles sur les packages npm restaient muettes).
+    exclude: {
+      path: '^(apps|packages)/[^/]+/(dist|coverage|reports|\\.stryker-tmp|android|ios|\\.expo)/',
+    },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       // Le domaine est résolu vers ses sources (condition `source`), comme dans les tests.
