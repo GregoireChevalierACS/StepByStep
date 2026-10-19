@@ -5,6 +5,7 @@ import { accountRepositoryContract } from '../../testing/contracts/account-repos
 import { dailyStepsRepositoryContract } from '../../testing/contracts/daily-steps-repository.contract.js';
 import { deviceRepositoryContract } from '../../testing/contracts/device-repository.contract.js';
 import { goalRepositoryContract } from '../../testing/contracts/goal-repository.contract.js';
+import { readingsUnitOfWorkContract } from '../../testing/contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from '../../testing/contracts/time-zone-repository.contract.js';
 import { dataSourceOptions } from '../data-source-options.js';
 import { DailyStepsEntity } from '../entities/daily-steps.entity.js';
@@ -15,6 +16,7 @@ import { TypeOrmAccountRepository } from './typeorm-account.repository.js';
 import { TypeOrmDailyStepsRepository } from './typeorm-daily-steps.repository.js';
 import { TypeOrmDeviceRepository } from './typeorm-device.repository.js';
 import { TypeOrmGoalRepository } from './typeorm-goal.repository.js';
+import { TypeOrmReadingsUnitOfWork } from './typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './typeorm-time-zone.repository.js';
 
 // Les adapters PostgreSQL passent les mêmes contrats que les fakes en mémoire. Chaque test
@@ -60,6 +62,14 @@ describe('adapters PostgreSQL (TypeORM)', () => {
     goalRepositoryContract(() => ({
       repository: new TypeOrmGoalRepository(dataSource),
       givenAccount,
+    }));
+  });
+
+  describe('TypeOrmReadingsUnitOfWork', () => {
+    readingsUnitOfWorkContract(() => ({
+      unitOfWork: new TypeOrmReadingsUnitOfWork(dataSource),
+      dailySteps: new TypeOrmDailyStepsRepository(dataSource),
+      givenDevice,
     }));
   });
 
