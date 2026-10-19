@@ -1,9 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { err, type GoalChange, GoalHistory, ok, type Result } from '@stepbystep/domain';
-import { DataSource } from 'typeorm';
-import { AccountEntity } from '../database/entities/account.entity.js';
-import { DailyGoalEntity } from '../database/entities/daily-goal.entity.js';
-import { goalChangeToDomain, goalChangeToRow } from '../database/mappers/goal-change.mapper.js';
+import { ACCOUNT_REPOSITORY, type AccountRepository } from '../accounts/account.repository.js';
+import { GOAL_REPOSITORY, type GoalRepository } from './goal.repository.js';
 
 export interface AccountNotFound {
   readonly kind: 'AccountNotFound';
@@ -21,43 +19,31 @@ export interface GoalHistoryEntry {
  */
 @Injectable()
 export class GoalsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    @Inject(ACCOUNT_REPOSITORY) private readonly accounts: AccountRepository,
+    @Inject(GOAL_REPOSITORY) private readonly goals: GoalRepository,
+  ) {}
 
   async set(
     accountId: string,
     change: GoalChange,
   ): Promise<Result<GoalHistoryEntry[], AccountNotFound>> {
-    if (!(await this.dataSource.getRepository(AccountEntity).existsBy({ id: accountId }))) {
+    if (!(await this.accounts.exists(accountId))) {
       return err({ kind: 'AccountNotFound', accountId });
     }
-
-    // UPSERT sur (compte, jour) : un objectif fixé deux fois le même jour est remplacé.
-    // Traduction en base de GoalHistory.record : la dernière décision l'emporte.
-    await this.dataSource
-      .createQueryBuilder()
-      .insert()
-      .into(DailyGoalEntity)
-      .values(goalChangeToRow(accountId, change))
-      .orUpdate(['goal_steps'], ['account_id', 'effective_from'])
-      .execute();
+    await this.goals.record(accountId, change);
 
     // Historique relu et normalisé par le domaine (ordre chronologique, redondances fusionnées).
-    const rows = await this.dataSource.getRepository(DailyGoalEntity).findBy({ accountId });
-    const history = GoalHistory.from(rows.map((row) => this.valid(goalChangeToDomain(row))));
-    const changes = this.valid(history).changes;
+    const history = GoalHistory.from(await this.goals.changesOf(accountId));
+    if (!history.ok) {
+      // Impossible si la persistance respecte son contrat (un objectif par jour).
+      throw new Error(`Historique d'objectifs incohérent : ${JSON.stringify(history.error)}`);
+    }
     return ok(
-      changes.map(({ effectiveFrom, goal }) => ({
+      history.value.changes.map(({ effectiveFrom, goal }) => ({
         effectiveFrom: effectiveFrom.toString(),
         goal: goal.steps.value,
       })),
     );
-  }
-
-  /** Une ligne relue invalide (ou un historique incohérent) est une incohérence de données. */
-  private valid<T>(result: Result<T, unknown>): T {
-    if (!result.ok) {
-      throw new Error(`Donnée enregistrée invalide : ${JSON.stringify(result.error)}`);
-    }
-    return result.value;
   }
 }

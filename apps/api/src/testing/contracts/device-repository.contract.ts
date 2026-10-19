@@ -25,4 +25,11 @@ export const deviceRepositoryContract = (repository: () => DeviceRepository): vo
   it('ne connaît pas un appareil jamais enregistré', async () => {
     expect(await repository().exists(randomUUID())).toBe(false);
   });
+
+  it('donne le compte d’un appareil, et rien pour un appareil inconnu', async () => {
+    const { accountId, deviceId } = await repository().registerWithNewAccount();
+
+    expect(await repository().accountOf(deviceId)).toBe(accountId);
+    expect(await repository().accountOf(randomUUID())).toBeUndefined();
+  });
 };
