@@ -2,7 +2,8 @@ import { Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { registeredDeviceResponse } from '../http/contract.js';
 import { openApiSchema } from '../http/openapi.js';
-import { DevicesService, type RegisteredDevice } from './devices.service.js';
+import type { RegisteredDevice } from './device.repository.js';
+import { DevicesService } from './devices.service.js';
 
 @ApiTags('Appareils')
 @Controller({ path: 'devices', version: '1' })
