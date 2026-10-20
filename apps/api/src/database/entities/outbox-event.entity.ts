@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 /**
  * Outbox transactionnelle : un événement de domaine est écrit ici dans la même transaction que
@@ -7,6 +7,8 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from
  */
 @Entity({ name: 'outbox_events' })
 @Unique('UQ_outbox_events_event_key', ['eventKey'])
+// Index partiel : le relais ne lit que les événements à publier, sans parcourir l'historique.
+@Index('IDX_outbox_events_pending', ['createdAt'], { where: '"published_at" IS NULL' })
 export class OutboxEventEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

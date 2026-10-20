@@ -7,7 +7,9 @@ export default defineConfig({
   resolve: { conditions: ['source', ...defaultServerConditions] },
   ssr: { resolve: { conditions: ['source', ...defaultServerConditions] } },
   test: {
-    env: { NODE_ENV: 'test' },
+    // Relais de l'outbox désactivé : sinon, chaque test qui démarre l'application publierait en
+    // arrière-plan des événements écrits par d'autres tests, au hasard du calendrier.
+    env: { NODE_ENV: 'test', OUTBOX_RELAY_INTERVAL_MS: '0' },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

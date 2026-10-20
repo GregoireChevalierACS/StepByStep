@@ -5,6 +5,7 @@ import type { Environment } from '../config/environment.js';
 import { ACCOUNT_REPOSITORY } from '../accounts/account.repository.js';
 import { DAILY_STEPS_REPOSITORY } from '../daily-steps/daily-steps.repository.js';
 import { DEVICE_REPOSITORY } from '../devices/device.repository.js';
+import { OUTBOX } from '../events/outbox.js';
 import { GOAL_REPOSITORY } from '../goals/goal.repository.js';
 import { READINGS_UNIT_OF_WORK } from '../readings/readings-unit-of-work.js';
 import { TIME_ZONE_REPOSITORY } from '../time/time-zone.repository.js';
@@ -13,6 +14,7 @@ import { TypeOrmAccountRepository } from './repositories/typeorm-account.reposit
 import { TypeOrmDailyStepsRepository } from './repositories/typeorm-daily-steps.repository.js';
 import { TypeOrmDeviceRepository } from './repositories/typeorm-device.repository.js';
 import { TypeOrmGoalRepository } from './repositories/typeorm-goal.repository.js';
+import { TypeOrmOutbox } from './repositories/typeorm-outbox.js';
 import { TypeOrmReadingsUnitOfWork } from './repositories/typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './repositories/typeorm-time-zone.repository.js';
 
@@ -25,6 +27,7 @@ const repositories = [
   { provide: GOAL_REPOSITORY, useClass: TypeOrmGoalRepository },
   { provide: TIME_ZONE_REPOSITORY, useClass: TypeOrmTimeZoneRepository },
   { provide: READINGS_UNIT_OF_WORK, useClass: TypeOrmReadingsUnitOfWork },
+  { provide: OUTBOX, useClass: TypeOrmOutbox },
 ];
 
 /**

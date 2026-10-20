@@ -3,6 +3,7 @@ import { accountRepositoryContract } from './contracts/account-repository.contra
 import { dailyStepsRepositoryContract } from './contracts/daily-steps-repository.contract.js';
 import { deviceRepositoryContract } from './contracts/device-repository.contract.js';
 import { goalRepositoryContract } from './contracts/goal-repository.contract.js';
+import { outboxContract } from './contracts/outbox.contract.js';
 import { readingsUnitOfWorkContract } from './contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from './contracts/time-zone-repository.contract.js';
 import { InMemoryAccountRepository } from './in-memory-account.repository.js';
@@ -88,6 +89,19 @@ describe('adapters en mémoire', () => {
       storedEvents: (deviceId) =>
         Promise.resolve(stores.outbox.all().filter(({ key }) => key.includes(deviceId))),
     }));
+  });
+
+  describe('InMemoryOutbox', () => {
+    outboxContract(() => {
+      const outbox = new InMemoryOutbox();
+      return Promise.resolve({
+        outbox,
+        givenEvents: (events) => {
+          outbox.append(events);
+          return Promise.resolve();
+        },
+      });
+    });
   });
 
   describe('InMemoryTimeZoneRepository', () => {

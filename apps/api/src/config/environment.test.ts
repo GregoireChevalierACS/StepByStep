@@ -18,7 +18,17 @@ describe('parseEnvironment', () => {
       NODE_ENV: 'development',
       PORT: 3000,
       DATABASE_URL,
+      OUTBOX_RELAY_INTERVAL_MS: 5000,
     });
+  });
+
+  it('accepte 0 pour désactiver le relais de l’outbox, et refuse un intervalle invalide', () => {
+    expect(parseEnvironment({ DATABASE_URL, OUTBOX_RELAY_INTERVAL_MS: '0' })).toMatchObject({
+      OUTBOX_RELAY_INTERVAL_MS: 0,
+    });
+    expect(() => parseEnvironment({ DATABASE_URL, OUTBOX_RELAY_INTERVAL_MS: '-1' })).toThrow(
+      /OUTBOX_RELAY_INTERVAL_MS/,
+    );
   });
 
   it('convertit le port, lu comme du texte dans l’environnement, en nombre', () => {
