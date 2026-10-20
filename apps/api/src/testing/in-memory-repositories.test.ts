@@ -3,11 +3,13 @@ import { accountRepositoryContract } from './contracts/account-repository.contra
 import { dailyStepsRepositoryContract } from './contracts/daily-steps-repository.contract.js';
 import { deviceRepositoryContract } from './contracts/device-repository.contract.js';
 import { goalRepositoryContract } from './contracts/goal-repository.contract.js';
+import { readingsUnitOfWorkContract } from './contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from './contracts/time-zone-repository.contract.js';
 import { InMemoryAccountRepository } from './in-memory-account.repository.js';
 import { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository.js';
 import { InMemoryDeviceRepository } from './in-memory-device.repository.js';
 import { InMemoryGoalRepository } from './in-memory-goal.repository.js';
+import { InMemoryReadingsUnitOfWork } from './in-memory-readings-unit-of-work.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
 
 // Les fakes des tests unitaires passent les mêmes contrats que les adapters PostgreSQL.
@@ -54,6 +56,21 @@ describe('adapters en mémoire', () => {
     });
 
     goalRepositoryContract(() => ({ repository, givenAccount }));
+  });
+
+  describe('InMemoryReadingsUnitOfWork', () => {
+    let dailySteps: InMemoryDailyStepsRepository;
+    let unitOfWork: InMemoryReadingsUnitOfWork;
+    beforeEach(() => {
+      dailySteps = new InMemoryDailyStepsRepository();
+      unitOfWork = new InMemoryReadingsUnitOfWork(
+        devices,
+        new InMemoryTimeZoneRepository(),
+        dailySteps,
+      );
+    });
+
+    readingsUnitOfWorkContract(() => ({ unitOfWork, dailySteps, givenDevice }));
   });
 
   describe('InMemoryTimeZoneRepository', () => {

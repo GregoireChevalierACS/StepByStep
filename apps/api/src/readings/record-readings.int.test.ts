@@ -6,6 +6,7 @@ import { AccountEntity } from '../database/entities/account.entity.js';
 import { DailyStepsEntity } from '../database/entities/daily-steps.entity.js';
 import { DeviceEntity } from '../database/entities/device.entity.js';
 import { StepCounterReadingEntity } from '../database/entities/step-counter-reading.entity.js';
+import { TypeOrmReadingsUnitOfWork } from '../database/repositories/typeorm-readings-unit-of-work.js';
 import { unwrap } from '../testing/unwrap.js';
 import { RecordReadingsService } from './record-readings.service.js';
 
@@ -35,7 +36,7 @@ describe('RecordReadingsService', () => {
 
   beforeAll(async () => {
     dataSource = await new DataSource(dataSourceOptions(inject('databaseUrl'))).initialize();
-    service = new RecordReadingsService(dataSource);
+    service = new RecordReadingsService(new TypeOrmReadingsUnitOfWork(dataSource));
   });
 
   afterAll(async () => {
