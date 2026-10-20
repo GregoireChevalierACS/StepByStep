@@ -9,7 +9,11 @@ import { InMemoryAccountRepository } from './in-memory-account.repository.js';
 import { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository.js';
 import { InMemoryDeviceRepository } from './in-memory-device.repository.js';
 import { InMemoryGoalRepository } from './in-memory-goal.repository.js';
-import { InMemoryReadingsUnitOfWork } from './in-memory-readings-unit-of-work.js';
+import { InMemoryOutbox } from './in-memory-outbox.js';
+import {
+  InMemoryReadingsUnitOfWork,
+  type InMemoryStores,
+} from './in-memory-readings-unit-of-work.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
 
 // Les fakes des tests unitaires passent les mêmes contrats que les adapters PostgreSQL.
@@ -59,18 +63,31 @@ describe('adapters en mémoire', () => {
   });
 
   describe('InMemoryReadingsUnitOfWork', () => {
-    let dailySteps: InMemoryDailyStepsRepository;
+    let stores: InMemoryStores;
     let unitOfWork: InMemoryReadingsUnitOfWork;
     beforeEach(() => {
-      dailySteps = new InMemoryDailyStepsRepository();
-      unitOfWork = new InMemoryReadingsUnitOfWork(
+      stores = {
         devices,
-        new InMemoryTimeZoneRepository(),
-        dailySteps,
-      );
+        timeZones: new InMemoryTimeZoneRepository(),
+        dailySteps: new InMemoryDailyStepsRepository(),
+        goals: new InMemoryGoalRepository(),
+        outbox: new InMemoryOutbox(),
+      };
+      unitOfWork = new InMemoryReadingsUnitOfWork(stores);
     });
 
-    readingsUnitOfWorkContract(() => ({ unitOfWork, dailySteps, givenDevice }));
+    readingsUnitOfWorkContract(() => ({
+      unitOfWork,
+      dailySteps: stores.dailySteps,
+      givenDevice,
+      givenGoal: async (deviceId, change) => {
+        const accountId = await devices.accountOf(deviceId);
+        if (accountId === undefined) throw new Error('Appareil de test inconnu');
+        await stores.goals.record(accountId, change);
+      },
+      storedEvents: (deviceId) =>
+        Promise.resolve(stores.outbox.all().filter(({ key }) => key.includes(deviceId))),
+    }));
   });
 
   describe('InMemoryTimeZoneRepository', () => {

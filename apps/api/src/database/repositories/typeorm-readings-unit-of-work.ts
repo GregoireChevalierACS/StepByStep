@@ -2,17 +2,24 @@ import { Injectable } from '@nestjs/common';
 import {
   type DailySteps,
   err,
+  type GoalChange,
+  type LocalDate,
   type Result,
   type StepCounterReading,
   type TimeZonePeriod,
 } from '@stepbystep/domain';
-import { DataSource, type EntityManager } from 'typeorm';
+import { Between, DataSource, type EntityManager } from 'typeorm';
 import type { DeviceNotFound } from '../../devices/device-errors.js';
+import type { OutboxEvent } from '../../events/outbox-event.js';
 import type { DeviceLedger, ReadingsUnitOfWork } from '../../readings/readings-unit-of-work.js';
+import { DailyGoalEntity } from '../entities/daily-goal.entity.js';
 import { DailyStepsEntity } from '../entities/daily-steps.entity.js';
 import { DeviceTimeZoneEntity } from '../entities/device-time-zone.entity.js';
+import { DeviceEntity } from '../entities/device.entity.js';
+import { OutboxEventEntity } from '../entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from '../entities/step-counter-reading.entity.js';
-import { dailyStepsToRow } from '../mappers/daily-steps.mapper.js';
+import { dailyStepsToDomain, dailyStepsToRow } from '../mappers/daily-steps.mapper.js';
+import { goalChangeToDomain } from '../mappers/goal-change.mapper.js';
 import { readingToDomain, readingToRow } from '../mappers/step-counter-reading.mapper.js';
 import { periodToDomain, periodToRow } from '../mappers/time-zone-period.mapper.js';
 import { stored } from './stored.js';
@@ -108,6 +115,14 @@ class TypeOrmDeviceLedger implements DeviceLedger {
     return rows.map((row) => stored(readingToDomain(row)));
   }
 
+  async dailyStepsBetween(from: LocalDate, to: LocalDate): Promise<DailySteps[]> {
+    const rows = await this.manager.getRepository(DailyStepsEntity).find({
+      where: { deviceId: this.deviceId, day: Between(from.toString(), to.toString()) },
+      order: { day: 'ASC' },
+    });
+    return rows.map((row) => stored(dailyStepsToDomain(row)));
+  }
+
   async saveDailySteps(days: readonly DailySteps[]): Promise<void> {
     if (days.length === 0) return;
     // UPSERT : un jour déjà calculé reçoit son nouveau total.
@@ -117,6 +132,29 @@ class TypeOrmDeviceLedger implements DeviceLedger {
       .into(DailyStepsEntity)
       .values(days.map((daily) => dailyStepsToRow(this.deviceId, daily)))
       .orUpdate(['steps', 'updated_at'], ['device_id', 'day'])
+      .execute();
+  }
+
+  async goalChanges(): Promise<GoalChange[]> {
+    // L'appareil existe : le verrou de l'unité de travail vient d'être posé sur sa ligne.
+    const { accountId } = await this.manager
+      .getRepository(DeviceEntity)
+      .findOneByOrFail({ id: this.deviceId });
+    const rows = await this.manager.getRepository(DailyGoalEntity).findBy({ accountId });
+    return rows.map((row) => stored(goalChangeToDomain(row)));
+  }
+
+  async appendEvents(events: readonly OutboxEvent[]): Promise<void> {
+    if (events.length === 0) return;
+    // ON CONFLICT DO NOTHING sur la clé métier : un événement déjà enregistré est ignoré.
+    await this.manager
+      .createQueryBuilder()
+      .insert()
+      .into(OutboxEventEntity)
+      .values(
+        events.map(({ key, type, payload }) => ({ eventKey: key, type, payload: { ...payload } })),
+      )
+      .orIgnore()
       .execute();
   }
 

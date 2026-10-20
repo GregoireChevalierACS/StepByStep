@@ -5,6 +5,7 @@ import { dataSourceOptions } from '../database/data-source-options.js';
 import { AccountEntity } from '../database/entities/account.entity.js';
 import { DailyStepsEntity } from '../database/entities/daily-steps.entity.js';
 import { DeviceEntity } from '../database/entities/device.entity.js';
+import { OutboxEventEntity } from '../database/entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from '../database/entities/step-counter-reading.entity.js';
 import { TypeOrmReadingsUnitOfWork } from '../database/repositories/typeorm-readings-unit-of-work.js';
 import { unwrap } from '../testing/unwrap.js';
@@ -171,6 +172,31 @@ describe('RecordReadingsService', () => {
     await other.release();
     unwrap(await pending);
     expect(finished).toBe(true); // reprend dès que le verrou est libéré
+  });
+
+  it('écrit GoalReached dans l’outbox, une seule fois, avec les données', async () => {
+    const deviceId = await newDevice();
+    const batch = {
+      deviceId,
+      readings: [reading('2026-10-12T06:00:00Z', 1000), reading('2026-10-12T10:00:00Z', 11_500)],
+      timeZoneChanges: [PARIS],
+    };
+
+    unwrap(await service.record(batch));
+    unwrap(await service.record(batch));
+
+    const events = await dataSource
+      .getRepository(OutboxEventEntity)
+      .findBy({ eventKey: `goal-reached:${deviceId}:2026-10-12` });
+    expect(
+      events.map(({ type, payload, publishedAt }) => ({ type, payload, publishedAt })),
+    ).toEqual([
+      {
+        type: 'GoalReached',
+        payload: { deviceId, day: '2026-10-12', steps: 10_500, goal: 10_000 },
+        publishedAt: null,
+      },
+    ]);
   });
 
   describe('erreurs : rien n’est enregistré (transaction annulée)', () => {

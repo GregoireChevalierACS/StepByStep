@@ -1,5 +1,13 @@
-import type { DailySteps, Result, StepCounterReading, TimeZonePeriod } from '@stepbystep/domain';
+import type {
+  DailySteps,
+  GoalChange,
+  LocalDate,
+  Result,
+  StepCounterReading,
+  TimeZonePeriod,
+} from '@stepbystep/domain';
 import type { DeviceNotFound } from '../devices/device-errors.js';
+import type { OutboxEvent } from '../events/outbox-event.js';
 
 /**
  * Opérations sur les données d'un appareil, disponibles pendant une unité de travail : toutes
@@ -17,8 +25,17 @@ export interface DeviceLedger {
   readingInstantAfter(instant: number, inclusive: boolean): Promise<number | undefined>;
   /** Relevés pris entre `from` et `to`, bornes incluses, dans un ordre quelconque. */
   readingsBetween(from: number, to: number): Promise<StepCounterReading[]>;
+  /** Totaux déjà enregistrés des jours de `from` à `to` (bornes incluses), triés par jour. */
+  dailyStepsBetween(from: LocalDate, to: LocalDate): Promise<DailySteps[]>;
   /** Enregistre les pas de ces jours, en remplaçant les totaux déjà connus. */
   saveDailySteps(days: readonly DailySteps[]): Promise<void>;
+  /** Changements d'objectif du compte de l'appareil, dans un ordre quelconque. */
+  goalChanges(): Promise<GoalChange[]>;
+  /**
+   * Écrit des événements dans l'outbox, dans la même transaction que le reste du travail :
+   * annulés avec lui. Un événement dont la clé est déjà connue est ignoré.
+   */
+  appendEvents(events: readonly OutboxEvent[]): Promise<void>;
 }
 
 /**

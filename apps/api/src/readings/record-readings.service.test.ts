@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { LocalDate, ok, StepCounterReading, TimeZonePeriod } from '@stepbystep/domain';
+import { DailyGoal, LocalDate, ok, StepCounterReading, TimeZonePeriod } from '@stepbystep/domain';
 import { describe, expect, it } from 'vitest';
 import { InMemoryDailyStepsRepository } from '../testing/in-memory-daily-steps.repository.js';
 import { InMemoryDeviceRepository } from '../testing/in-memory-device.repository.js';
+import { InMemoryGoalRepository } from '../testing/in-memory-goal.repository.js';
+import { InMemoryOutbox } from '../testing/in-memory-outbox.js';
 import { InMemoryReadingsUnitOfWork } from '../testing/in-memory-readings-unit-of-work.js';
 import { InMemoryTimeZoneRepository } from '../testing/in-memory-time-zone.repository.js';
 import { unwrap } from '../testing/unwrap.js';
@@ -20,8 +22,16 @@ const setup = async () => {
   const devices = new InMemoryDeviceRepository();
   const timeZones = new InMemoryTimeZoneRepository();
   const dailySteps = new InMemoryDailyStepsRepository();
-  const unitOfWork = new InMemoryReadingsUnitOfWork(devices, timeZones, dailySteps);
-  const { deviceId } = await devices.registerWithNewAccount();
+  const goals = new InMemoryGoalRepository();
+  const outbox = new InMemoryOutbox();
+  const unitOfWork = new InMemoryReadingsUnitOfWork({
+    devices,
+    timeZones,
+    dailySteps,
+    goals,
+    outbox,
+  });
+  const { accountId, deviceId } = await devices.registerWithNewAccount();
   const storedDays = async () =>
     (await dailySteps.upTo(deviceId, unwrap(LocalDate.create('2100-01-01')))).map(
       ({ date, steps }) => ({ day: date.toString(), steps: steps.value }),
@@ -33,7 +43,10 @@ const setup = async () => {
       ),
     );
   return {
+    accountId,
     deviceId,
+    goals,
+    outbox,
     timeZones,
     storedDays,
     storedReadings,
@@ -133,6 +146,86 @@ describe('RecordReadingsService', () => {
     ]);
 
     expect(await storedDays()).toEqual([{ day: '2026-10-12', steps: 3000 }]);
+  });
+
+  describe('événement GoalReached, écrit dans l’outbox avec les données', () => {
+    it('le publie quand un lot fait atteindre l’objectif du jour (10 000 par défaut)', async () => {
+      const { deviceId, service, outbox } = await setup();
+
+      unwrap(
+        await service.record({
+          deviceId,
+          readings: [
+            reading('2026-10-12T06:00:00Z', 1000),
+            reading('2026-10-12T10:00:00Z', 11_500),
+          ],
+          timeZoneChanges: [PARIS],
+        }),
+      );
+
+      expect(outbox.all()).toEqual([
+        {
+          key: `goal-reached:${deviceId}:2026-10-12`,
+          type: 'GoalReached',
+          payload: { deviceId, day: '2026-10-12', steps: 10_500, goal: 10_000 },
+        },
+      ]);
+    });
+
+    it('ne le publie qu’une fois par jour, même si le total continue de monter', async () => {
+      const { deviceId, service, outbox } = await setup();
+      const first = {
+        deviceId,
+        readings: [reading('2026-10-12T06:00:00Z', 1000), reading('2026-10-12T10:00:00Z', 11_500)],
+        timeZoneChanges: [PARIS],
+      };
+      unwrap(await service.record(first));
+
+      unwrap(await service.record(first));
+      unwrap(
+        await service.record({
+          deviceId,
+          readings: [reading('2026-10-12T15:00:00Z', 14_000)],
+          timeZoneChanges: [],
+        }),
+      );
+
+      expect(outbox.all()).toHaveLength(1);
+    });
+
+    it('juge le jour avec l’objectif fixé par le compte', async () => {
+      const { accountId, deviceId, goals, service, outbox } = await setup();
+      await goals.record(accountId, {
+        effectiveFrom: unwrap(LocalDate.create('2026-10-01')),
+        goal: unwrap(DailyGoal.create(5000)),
+      });
+
+      unwrap(
+        await service.record({
+          deviceId,
+          readings: [reading('2026-10-12T06:00:00Z', 1000), reading('2026-10-12T10:00:00Z', 7000)],
+          timeZoneChanges: [PARIS],
+        }),
+      );
+
+      expect(outbox.all().map(({ payload }) => payload)).toEqual([
+        { deviceId, day: '2026-10-12', steps: 6000, goal: 5000 },
+      ]);
+    });
+
+    it('ne publie rien sous l’objectif', async () => {
+      const { deviceId, service, outbox } = await setup();
+
+      unwrap(
+        await service.record({
+          deviceId,
+          readings: [reading('2026-10-12T06:00:00Z', 1000), reading('2026-10-12T10:00:00Z', 3000)],
+          timeZoneChanges: [PARIS],
+        }),
+      );
+
+      expect(outbox.all()).toEqual([]);
+    });
   });
 
   describe('erreurs : rien n’est enregistré', () => {
