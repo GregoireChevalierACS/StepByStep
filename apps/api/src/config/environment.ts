@@ -10,6 +10,8 @@ const environmentSchema = z.object({
   DATABASE_URL: z.string().refine((url) => POSTGRES_URL.test(url) && URL.canParse(url), {
     message: 'URL PostgreSQL attendue : postgres://utilisateur:motdepasse@hôte:port/base',
   }),
+  // Intervalle du relais de l'outbox (publication des événements) ; 0 le désactive (tests).
+  OUTBOX_RELAY_INTERVAL_MS: z.coerce.number().int().min(0).default(5000),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

@@ -4,6 +4,7 @@ import { parseEnvironment } from './config/environment.js';
 import { DailyStepsModule } from './daily-steps/daily-steps.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DevicesModule } from './devices/devices.module.js';
+import { EventsModule } from './events/events.module.js';
 import { GoalsModule } from './goals/goals.module.js';
 import { HealthModule } from './health/health.module.js';
 import { ReadingsModule } from './readings/readings.module.js';
@@ -22,6 +23,7 @@ import { StreakModule } from './streak/streak.module.js';
     DailyStepsModule,
     GoalsModule,
     StreakModule,
+    EventsModule,
   ],
 })
 export class AppModule {}

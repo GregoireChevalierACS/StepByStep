@@ -8,6 +8,7 @@ import { OutboxEventEntity } from './entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from './entities/step-counter-reading.entity.js';
 import { InitialSchema1791743484726 } from './migrations/1791743484726-initial-schema.js';
 import { OutboxEvents1792520157801 } from './migrations/1792520157801-outbox-events.js';
+import { OutboxPendingIndex1792520763543 } from './migrations/1792520763543-outbox-pending-index.js';
 
 // Listes explicites (pas de motifs de fichiers) : vérifiées par TypeScript, insensibles
 // à la différence entre sources .ts et fichiers compilés .js.
@@ -22,7 +23,11 @@ export const ENTITIES = [
 ];
 
 // Dans l'ordre d'application.
-export const MIGRATIONS = [InitialSchema1791743484726, OutboxEvents1792520157801];
+export const MIGRATIONS = [
+  InitialSchema1791743484726,
+  OutboxEvents1792520157801,
+  OutboxPendingIndex1792520763543,
+];
 
 /**
  * Source unique de la configuration TypeORM : utilisée par l'API, par le script de

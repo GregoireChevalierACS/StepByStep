@@ -242,7 +242,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 2. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
 3. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
 4. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.
-5. `GoalReached` → notification push (Firebase Cloud Messaging) via un **outbox transactionnel**.
+5. `GoalReached` → notification push (Firebase Cloud Messaging) via un **outbox transactionnel**. *Fait jusqu'à la publication (ADR 0002, décision 14) : détection dans le domaine, outbox écrite dans l'unité de travail, relais `SKIP LOCKED`. Reste l'adapter Firebase du port `EventPublisher`, qui journalise pour l'instant.*
 6. Classement en direct par WebSocket (gateway NestJS).
 7. Bilan mensuel en PDF stocké sur S3.
 8. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
