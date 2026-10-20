@@ -3,6 +3,7 @@ import {
   type ConflictingTimeZonePeriods,
   dailyStepsFromReadings,
   err,
+  goalsReached,
   ok,
   type Result,
   type StepCounterReading,
@@ -10,6 +11,8 @@ import {
   type TimeZonePeriod,
 } from '@stepbystep/domain';
 import type { DeviceNotFound, MissingTimeZone } from '../devices/device-errors.js';
+import { goalReachedEvent } from '../events/outbox-event.js';
+import { goalHistoryOrDefault } from '../goals/default-daily-goal.js';
 import type { UnknownTimeZone } from '../time/intl-local-calendar.js';
 import { TimeZoneHistoryCalendar } from '../time/time-zone-history-calendar.js';
 import { recalculationWindow } from './recalculation-window.js';
@@ -106,7 +109,15 @@ export class RecordReadingsService {
     ).filter(
       ({ date }) => date.compareTo(window.firstDay) >= 0 && date.compareTo(window.lastDay) <= 0,
     );
+    // 5. Événements : jours qui viennent de franchir leur objectif, jugés sur les totaux
+    //    d'avant ce recalcul. Écrits dans l'outbox, dans la même unité de travail que les
+    //    données : publiés plus tard par le relais, jamais perdus ni inventés.
+    const before = await ledger.dailyStepsBetween(window.firstDay, window.lastDay);
     await ledger.saveDailySteps(days);
+    const goals = goalHistoryOrDefault(await ledger.goalChanges(), window.firstDay);
+    await ledger.appendEvents(
+      goalsReached(before, days, goals).map((reached) => goalReachedEvent(deviceId, reached)),
+    );
 
     return ok({
       ...report,

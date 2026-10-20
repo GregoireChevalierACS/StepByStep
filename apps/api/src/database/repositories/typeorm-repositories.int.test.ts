@@ -7,9 +7,11 @@ import { deviceRepositoryContract } from '../../testing/contracts/device-reposit
 import { goalRepositoryContract } from '../../testing/contracts/goal-repository.contract.js';
 import { readingsUnitOfWorkContract } from '../../testing/contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from '../../testing/contracts/time-zone-repository.contract.js';
+import type { OutboxEvent } from '../../events/outbox-event.js';
 import { dataSourceOptions } from '../data-source-options.js';
 import { DailyStepsEntity } from '../entities/daily-steps.entity.js';
 import { DeviceTimeZoneEntity } from '../entities/device-time-zone.entity.js';
+import { OutboxEventEntity } from '../entities/outbox-event.entity.js';
 import { dailyStepsToRow } from '../mappers/daily-steps.mapper.js';
 import { periodToRow } from '../mappers/time-zone-period.mapper.js';
 import { TypeOrmAccountRepository } from './typeorm-account.repository.js';
@@ -70,6 +72,24 @@ describe('adapters PostgreSQL (TypeORM)', () => {
       unitOfWork: new TypeOrmReadingsUnitOfWork(dataSource),
       dailySteps: new TypeOrmDailyStepsRepository(dataSource),
       givenDevice,
+      givenGoal: async (deviceId, change) => {
+        const accountId = await new TypeOrmDeviceRepository(dataSource).accountOf(deviceId);
+        if (accountId === undefined) throw new Error('Appareil de test inconnu');
+        await new TypeOrmGoalRepository(dataSource).record(accountId, change);
+      },
+      storedEvents: async (deviceId) =>
+        (
+          await dataSource
+            .getRepository(OutboxEventEntity)
+            .createQueryBuilder('event')
+            .where('event.event_key LIKE :pattern', { pattern: `%${deviceId}%` })
+            .getMany()
+        ).map(({ eventKey, type, payload }) => ({
+          key: eventKey,
+          type,
+          // jsonb relu tel qu'écrit : le contrat compare le contenu.
+          payload: payload as OutboxEvent['payload'],
+        })),
     }));
   });
 

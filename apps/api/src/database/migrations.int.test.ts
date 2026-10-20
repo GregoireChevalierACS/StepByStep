@@ -9,6 +9,7 @@ const TABLES = [
   'daily_steps',
   'device_time_zones',
   'devices',
+  'outbox_events',
   'step_counter_readings',
 ];
 

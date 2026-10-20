@@ -4,8 +4,10 @@ import { DailyGoalEntity } from './entities/daily-goal.entity.js';
 import { DailyStepsEntity } from './entities/daily-steps.entity.js';
 import { DeviceTimeZoneEntity } from './entities/device-time-zone.entity.js';
 import { DeviceEntity } from './entities/device.entity.js';
+import { OutboxEventEntity } from './entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from './entities/step-counter-reading.entity.js';
 import { InitialSchema1791743484726 } from './migrations/1791743484726-initial-schema.js';
+import { OutboxEvents1792520157801 } from './migrations/1792520157801-outbox-events.js';
 
 // Listes explicites (pas de motifs de fichiers) : vérifiées par TypeScript, insensibles
 // à la différence entre sources .ts et fichiers compilés .js.
@@ -16,10 +18,11 @@ export const ENTITIES = [
   DeviceTimeZoneEntity,
   DailyGoalEntity,
   DailyStepsEntity,
+  OutboxEventEntity,
 ];
 
 // Dans l'ordre d'application.
-export const MIGRATIONS = [InitialSchema1791743484726];
+export const MIGRATIONS = [InitialSchema1791743484726, OutboxEvents1792520157801];
 
 /**
  * Source unique de la configuration TypeORM : utilisée par l'API, par le script de
