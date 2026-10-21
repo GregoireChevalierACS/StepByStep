@@ -16,6 +16,8 @@ const api = spawn(process.execPath, ['apps/api/dist/main.js'], {
     // Base locale de compose.yaml (`pnpm db:up`), sauf si DATABASE_URL est fournie.
     DATABASE_URL:
       process.env.DATABASE_URL ?? 'postgres://stepbystep:stepbystep@127.0.0.1:5432/stepbystep',
+    // Clé de signature des jetons : une valeur propre au smoke test, sauf si elle est fournie.
+    JWT_SECRET: process.env.JWT_SECRET ?? 'cle-de-signature-du-smoke-test-de-l-api-compilee',
   },
   stdio: ['ignore', 'inherit', 'inherit'],
 });

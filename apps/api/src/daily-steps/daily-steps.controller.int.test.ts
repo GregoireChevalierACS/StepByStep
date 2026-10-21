@@ -1,17 +1,22 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../configure-app.js';
+import { DeviceEntity } from '../database/entities/device.entity.js';
+import { registerAuthenticatedDevice } from '../testing/authenticated-device.js';
 
 type App = Parameters<typeof request>[0];
 
 describe('GET /v1/devices/:deviceId/daily-steps', () => {
   let app: INestApplication<App>;
   let deviceId: string;
+  let authorization: string;
 
-  const get = (path: string) => request(app.getHttpServer()).get(path);
+  const get = (path: string, auth = authorization) =>
+    request(app.getHttpServer()).get(path).set('Authorization', auth);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -20,13 +25,10 @@ describe('GET /v1/devices/:deviceId/daily-steps', () => {
 
     // Données créées par l'API elle-même : 1000 pas le 12 et le 13 octobre (Paris),
     // puis 2000 pas le 15.
-    deviceId = (
-      (await request(app.getHttpServer()).post('/v1/devices').expect(201)).body as {
-        deviceId: string;
-      }
-    ).deviceId;
+    ({ deviceId, authorization } = await registerAuthenticatedDevice(app.getHttpServer()));
     await request(app.getHttpServer())
       .post(`/v1/devices/${deviceId}/readings`)
+      .set('Authorization', authorization)
       .send({
         readings: [
           { stepsSinceBoot: 1000, bootCount: 7, takenAt: '2026-10-12T21:00:00Z' },
@@ -81,9 +83,13 @@ describe('GET /v1/devices/:deviceId/daily-steps', () => {
         .expect('Content-Type', /application\/problem\+json/);
     });
 
-    it('404 pour un appareil inconnu', async () => {
+    it('404 pour un appareil supprimé dont le jeton est encore valide', async () => {
+      const deleted = await registerAuthenticatedDevice(app.getHttpServer());
+      await app.get(DataSource).getRepository(DeviceEntity).delete({ id: deleted.deviceId });
+
       const response = await get(
-        '/v1/devices/00000000-0000-4000-8000-000000000000/daily-steps?from=2026-10-12&to=2026-10-15',
+        `/v1/devices/${deleted.deviceId}/daily-steps?from=2026-10-12&to=2026-10-15`,
+        deleted.authorization,
       ).expect(404);
 
       expect(response.body).toMatchObject({

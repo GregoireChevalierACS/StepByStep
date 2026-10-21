@@ -9,6 +9,7 @@ import { InMemoryReadingsUnitOfWork } from '../testing/in-memory-readings-unit-o
 import { InMemoryTimeZoneRepository } from '../testing/in-memory-time-zone.repository.js';
 import { unwrap } from '../testing/unwrap.js';
 import { RecordReadingsService } from './record-readings.service.js';
+import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 const reading = (instant: string, stepsSinceBoot: number, bootCount = 7) =>
   unwrap(StepCounterReading.create({ stepsSinceBoot, bootCount, takenAt: Date.parse(instant) }));
@@ -31,7 +32,7 @@ const setup = async () => {
     goals,
     outbox,
   });
-  const { accountId, deviceId } = await devices.registerWithNewAccount();
+  const { accountId, deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
   const storedDays = async () =>
     (await dailySteps.upTo(deviceId, unwrap(LocalDate.create('2100-01-01')))).map(
       ({ date, steps }) => ({ day: date.toString(), steps: steps.value }),

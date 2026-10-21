@@ -67,7 +67,7 @@ cd apps/api
 node --env-file=.env dist/main.js            # API sur le port 3000
 ```
 
-L'API occupe ce terminal : la suite se fait dans un autre, à la racine du dépôt. Vérification : <http://localhost:3000/v1/health> répond `"status":"ok"`, et le contrat est consultable sur <http://localhost:3000/v1/docs> (Swagger UI). Pour tout arrêter : `Ctrl+C` puis `pnpm db:down`.
+L'API occupe ce terminal : la suite se fait dans un autre, à la racine du dépôt. Vérification : <http://localhost:3000/v1/health> répond `"status":"ok"`, et le contrat est consultable sur <http://localhost:3000/v1/docs> (Swagger UI). Les routes d'un appareil exigent un jeton : `POST /v1/devices` renvoie un `secret`, `POST /v1/devices/{deviceId}/tokens` l'échange contre un jeton de 15 minutes, à coller dans le bouton « Authorize » de Swagger. Pour tout arrêter : `Ctrl+C` puis `pnpm db:down`.
 
 App mobile (Expo, dev build sur le S22) : un écran qui lit le compteur de pas matériel via un module natif Kotlin et envoie le relevé à l'API. Prérequis : JDK 17, SDK Android, débogage sans fil activé sur le téléphone ([ROADMAP, annexe](ROADMAP.md#8-annexe--déploiement-sans-câble-usb)). `<IP>:<PORT>` est l'adresse affichée sur l'écran « Débogage sans fil » ; le port change à chaque réactivation.
 

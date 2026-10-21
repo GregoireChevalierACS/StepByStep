@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { DeviceAuthenticated } from '../auth/device-authenticated.decorator.js';
 import { deviceNotFoundException } from '../devices/device-errors.js';
 import { dailyStepsResponse } from '../http/contract.js';
 import { ApiProblems, openApiSchema } from '../http/openapi.js';
@@ -10,6 +11,7 @@ import { type DayTotal, DailyStepsService } from './daily-steps.service.js';
 import { type PeriodQuery, periodQuery } from './period.query.js';
 
 @ApiTags('Pas par jour')
+@DeviceAuthenticated()
 @Controller({ path: 'devices/:deviceId/daily-steps', version: '1' })
 export class DailyStepsController {
   constructor(private readonly dailySteps: DailyStepsService) {}

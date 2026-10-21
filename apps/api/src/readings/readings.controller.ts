@@ -10,6 +10,7 @@ import {
   type HttpException,
 } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { DeviceAuthenticated } from '../auth/device-authenticated.decorator.js';
 import { deviceNotFoundException, missingTimeZoneException } from '../devices/device-errors.js';
 import { recordReadingsResponse } from '../http/contract.js';
 import { ApiProblems, openApiSchema } from '../http/openapi.js';
@@ -43,6 +44,7 @@ const toHttpException = (error: RecordReadingsError): HttpException => {
 };
 
 @ApiTags('Relevés')
+@DeviceAuthenticated()
 @Controller({ path: 'devices/:deviceId/readings', version: '1' })
 export class ReadingsController {
   constructor(private readonly recordReadings: RecordReadingsService) {}

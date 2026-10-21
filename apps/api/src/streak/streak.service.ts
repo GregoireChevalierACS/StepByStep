@@ -22,7 +22,7 @@ import { GOAL_REPOSITORY, type GoalRepository } from '../goals/goal.repository.j
 import type { UnknownTimeZone } from '../time/intl-local-calendar.js';
 import { TimeZoneHistoryCalendar } from '../time/time-zone-history-calendar.js';
 import { TIME_ZONE_REPOSITORY, type TimeZoneRepository } from '../time/time-zone.repository.js';
-import { CLOCK } from './clock.js';
+import { CLOCK } from '../clock/clock.js';
 
 export interface StreakReport {
   readonly today: string;

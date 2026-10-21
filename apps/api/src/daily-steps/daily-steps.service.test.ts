@@ -5,6 +5,7 @@ import { InMemoryDailyStepsRepository } from '../testing/in-memory-daily-steps.r
 import { InMemoryDeviceRepository } from '../testing/in-memory-device.repository.js';
 import { unwrap } from '../testing/unwrap.js';
 import { DailyStepsService } from './daily-steps.service.js';
+import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 // Cas d'usage testé sans base ni NestJS : ses ports sont remplacés par les adapters en mémoire.
 const setup = () => {
@@ -16,7 +17,7 @@ const setup = () => {
 describe('DailyStepsService', () => {
   it('renvoie les pas par jour de la période, au format de l’API', async () => {
     const { devices, dailySteps, service } = setup();
-    const { deviceId } = await devices.registerWithNewAccount();
+    const { deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
     dailySteps.given(deviceId, [
       { date: unwrap(LocalDate.create('2026-10-05')), steps: unwrap(StepCount.create(2800)) },
     ]);

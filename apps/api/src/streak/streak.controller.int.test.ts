@@ -1,10 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
+import { CLOCK } from '../clock/clock.js';
 import { configureApp } from '../configure-app.js';
-import { CLOCK } from './clock.js';
+import { DeviceEntity } from '../database/entities/device.entity.js';
+import { registerAuthenticatedDevice } from '../testing/authenticated-device.js';
 
 type App = Parameters<typeof request>[0];
 
@@ -15,6 +18,8 @@ describe('GET /v1/devices/:deviceId/streak', () => {
   let app: INestApplication<App>;
 
   const http = () => request(app.getHttpServer());
+  // Jeton de chaque appareil et de son compte, pour appeler les routes protégées.
+  const authorizations = new Map<string, string>();
 
   /** Crée un appareil (fuseau Paris) et enregistre `stepsPerDay` à partir du jour `firstDay`. */
   const deviceWalking = async (
@@ -22,11 +27,16 @@ describe('GET /v1/devices/:deviceId/streak', () => {
     stepsPerDay: readonly number[],
     goal?: { goal: number; effectiveFrom: string },
   ): Promise<{ deviceId: string; accountId: string }> => {
-    const ids = (await http().post('/v1/devices').expect(201)).body as {
-      deviceId: string;
-      accountId: string;
-    };
-    if (goal) await http().put(`/v1/accounts/${ids.accountId}/goal`).send(goal).expect(200);
+    const ids = await registerAuthenticatedDevice(app.getHttpServer());
+    authorizations.set(ids.deviceId, ids.authorization);
+    authorizations.set(ids.accountId, ids.authorization);
+    if (goal) {
+      await http()
+        .put(`/v1/accounts/${ids.accountId}/goal`)
+        .set('Authorization', ids.authorization)
+        .send(goal)
+        .expect(200);
+    }
     // Deux relevés par jour (08:00 et 20:00 à Paris) ; aucun pas pendant la nuit.
     let counter = 0;
     const readings = stepsPerDay.flatMap((steps, index) => {
@@ -44,16 +54,22 @@ describe('GET /v1/devices/:deviceId/streak', () => {
     });
     await http()
       .post(`/v1/devices/${ids.deviceId}/readings`)
+      .set('Authorization', ids.authorization)
       .send({
         readings,
         timeZoneChanges: [{ timeZone: 'Europe/Paris', since: '2026-01-01T00:00:00Z' }],
       })
       .expect(200);
-    return ids;
+    return { deviceId: ids.deviceId, accountId: ids.accountId };
   };
 
   const streakOf = async (deviceId: string) =>
-    (await http().get(`/v1/devices/${deviceId}/streak`).expect(200)).body as {
+    (
+      await http()
+        .get(`/v1/devices/${deviceId}/streak`)
+        .set('Authorization', authorizations.get(deviceId) ?? '')
+        .expect(200)
+    ).body as {
       today: string;
       streak: number;
       badges: { id: string }[];
@@ -92,6 +108,7 @@ describe('GET /v1/devices/:deviceId/streak', () => {
     // avec 10 000 et la série tient. Juger le passé avec l'objectif actuel la ferait tomber à 0.
     await http()
       .put(`/v1/accounts/${accountId}/goal`)
+      .set('Authorization', authorizations.get(accountId) ?? '')
       .send({ goal: 20_000, effectiveFrom: '2026-10-15' })
       .expect(200);
 
@@ -138,9 +155,13 @@ describe('GET /v1/devices/:deviceId/streak', () => {
   });
 
   describe('erreurs', () => {
-    it('404 pour un appareil inconnu', async () => {
+    it('404 pour un appareil supprimé dont le jeton est encore valide', async () => {
+      const deleted = await registerAuthenticatedDevice(app.getHttpServer());
+      await app.get(DataSource).getRepository(DeviceEntity).delete({ id: deleted.deviceId });
+
       const response = await http()
-        .get('/v1/devices/00000000-0000-4000-8000-000000000000/streak')
+        .get(`/v1/devices/${deleted.deviceId}/streak`)
+        .set('Authorization', deleted.authorization)
         .expect(404);
 
       expect(response.body).toMatchObject({
@@ -148,16 +169,19 @@ describe('GET /v1/devices/:deviceId/streak', () => {
       });
     });
 
-    it('400 pour un identifiant qui n’est pas un UUID', async () => {
-      await http().get('/v1/devices/pas-un-uuid/streak').expect(400);
+    it('401 sans jeton', async () => {
+      const { deviceId } = await registerAuthenticatedDevice(app.getHttpServer());
+
+      await http().get(`/v1/devices/${deviceId}/streak`).expect(401);
     });
 
     it('422 pour un appareil qui n’a encore transmis aucun fuseau', async () => {
-      const { deviceId } = (await http().post('/v1/devices').expect(201)).body as {
-        deviceId: string;
-      };
+      const { deviceId, authorization } = await registerAuthenticatedDevice(app.getHttpServer());
 
-      await http().get(`/v1/devices/${deviceId}/streak`).expect(422);
+      await http()
+        .get(`/v1/devices/${deviceId}/streak`)
+        .set('Authorization', authorization)
+        .expect(422);
     });
   });
 });

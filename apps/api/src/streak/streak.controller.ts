@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { deviceNotFoundException, missingTimeZoneException } from '../devices/device-errors.js';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { DeviceAuthenticated } from '../auth/device-authenticated.decorator.js';
 import { streakResponse } from '../http/contract.js';
 import { ApiProblems, openApiSchema } from '../http/openapi.js';
 import { uuidSchema } from '../http/schemas.js';
@@ -25,6 +26,7 @@ const toHttpException = (error: StreakError): HttpException => {
 };
 
 @ApiTags('Série et badges')
+@DeviceAuthenticated()
 @Controller({ path: 'devices/:deviceId/streak', version: '1' })
 export class StreakController {
   constructor(private readonly streaks: StreakService) {}

@@ -23,6 +23,8 @@ export const openApiSchema = (schema: z.ZodType, io: 'input' | 'output' = 'input
 
 const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: 'Requête mal formée (structure, types, formats)',
+  401: 'Jeton d’appareil absent, invalide ou expiré (ou identifiants refusés)',
+  403: 'Jeton valide, mais pour un autre appareil ou un autre compte',
   404: 'Ressource inconnue',
   409: 'Conflit avec des données déjà enregistrées',
   422: 'Valeurs refusées par les règles métier',
@@ -51,6 +53,8 @@ export const setupOpenApi = (app: INestApplication): void => {
         'jour local, objectif quotidien, série et badges. Erreurs au format Problem Details.',
     )
     .setVersion('1')
+    // Jeton d'appareil obtenu par POST /v1/devices/{deviceId}/tokens.
+    .addBearerAuth()
     .build();
   SwaggerModule.setup('v1/docs', app, () => SwaggerModule.createDocument(app, config), {
     jsonDocumentUrl: 'v1/docs-json',

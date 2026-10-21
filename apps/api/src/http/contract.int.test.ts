@@ -6,6 +6,7 @@ import { AppModule } from '../app.module.js';
 import { configureApp } from '../configure-app.js';
 import {
   dailyStepsResponse,
+  deviceTokenResponse,
   goalHistoryResponse,
   problemDetailsResponse,
   recordReadingsResponse,
@@ -35,11 +36,21 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
     const device = registeredDeviceResponse.parse(
       (await http().post('/v1/devices').expect(201)).body,
     );
+    const { token } = deviceTokenResponse.parse(
+      (
+        await http()
+          .post(`/v1/devices/${device.deviceId}/tokens`)
+          .send({ secret: device.secret })
+          .expect(200)
+      ).body,
+    );
+    const authorization = `Bearer ${token}`;
 
     recordReadingsResponse.parse(
       (
         await http()
           .post(`/v1/devices/${device.deviceId}/readings`)
+          .set('Authorization', authorization)
           .send({
             readings: [
               { stepsSinceBoot: 0, bootCount: 7, takenAt: '2026-10-12T06:00:00Z' },
@@ -55,6 +66,7 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
       (
         await http()
           .get(`/v1/devices/${device.deviceId}/daily-steps?from=2026-10-01&to=2026-10-31`)
+          .set('Authorization', authorization)
           .expect(200)
       ).body,
     );
@@ -63,21 +75,33 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
       (
         await http()
           .put(`/v1/accounts/${device.accountId}/goal`)
+          .set('Authorization', authorization)
           .send({ goal: 10_000, effectiveFrom: '2026-10-01' })
           .expect(200)
       ).body,
     );
 
     streakResponse.parse(
-      (await http().get(`/v1/devices/${device.deviceId}/streak`).expect(200)).body,
+      (
+        await http()
+          .get(`/v1/devices/${device.deviceId}/streak`)
+          .set('Authorization', authorization)
+          .expect(200)
+      ).body,
     );
   });
 
   it('renvoie ses erreurs au format Problem Details publié', async () => {
-    const response = await http()
+    const unauthenticated = await http()
       .get('/v1/devices/00000000-0000-4000-8000-000000000000/streak')
-      .expect(404);
+      .expect(401);
+    const refusedSecret = await http()
+      .post('/v1/devices/00000000-0000-4000-8000-000000000000/tokens')
+      .send({ secret: 'pas-le-bon' })
+      .expect(401);
 
-    expect(problemDetailsResponse.safeParse(response.body).success).toBe(true);
+    for (const { body } of [unauthenticated, refusedSecret]) {
+      expect(problemDetailsResponse.safeParse(body).success).toBe(true);
+    }
   });
 });

@@ -6,6 +6,7 @@ import { InMemoryDeviceRepository } from '../testing/in-memory-device.repository
 import { InMemoryGoalRepository } from '../testing/in-memory-goal.repository.js';
 import { unwrap } from '../testing/unwrap.js';
 import { GoalsService } from './goals.service.js';
+import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 const setup = () => {
   const devices = new InMemoryDeviceRepository();
@@ -23,7 +24,7 @@ const change = (effectiveFrom: string, goal: number): GoalChange => ({
 describe('GoalsService', () => {
   it('renvoie l’historique normalisé par le domaine (chronologique, sans redondance)', async () => {
     const { devices, service } = setup();
-    const { accountId } = await devices.registerWithNewAccount();
+    const { accountId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
 
     await service.set(accountId, change('2026-10-10', 8000));
     await service.set(accountId, change('2026-10-01', 6000));

@@ -13,8 +13,15 @@ interface OpenApiDocument {
   openapi: string;
   paths: Record<
     string,
-    Record<string, { requestBody?: { content: Record<string, { schema: unknown }> } }>
+    Record<
+      string,
+      {
+        requestBody?: { content: Record<string, { schema: unknown }> };
+        security?: Record<string, unknown>[];
+      }
+    >
   >;
+  components: { securitySchemes?: Record<string, { type: string; scheme?: string }> };
 }
 
 describe('documentation OpenAPI', () => {
@@ -45,6 +52,7 @@ describe('documentation OpenAPI', () => {
       'get /v1/health',
       'post /v1/devices',
       'post /v1/devices/{deviceId}/readings',
+      'post /v1/devices/{deviceId}/tokens',
       'put /v1/accounts/{accountId}/goal',
     ]);
   });
@@ -55,6 +63,27 @@ describe('documentation OpenAPI', () => {
     expect(readings?.requestBody?.content['application/json']?.schema).toEqual(
       openApiSchema(recordReadingsBody),
     );
+  });
+
+  it('déclare le jeton Bearer sur les routes protégées, et seulement sur elles', () => {
+    expect(document.components.securitySchemes?.['bearer']).toMatchObject({
+      type: 'http',
+      scheme: 'bearer',
+    });
+    const protectedRoutes = Object.entries(document.paths)
+      .flatMap(([path, methods]) =>
+        Object.entries(methods)
+          .filter(([, operation]) => operation.security?.some((scheme) => 'bearer' in scheme))
+          .map(([method]) => `${method} ${path}`),
+      )
+      .sort();
+
+    expect(protectedRoutes).toEqual([
+      'get /v1/devices/{deviceId}/daily-steps',
+      'get /v1/devices/{deviceId}/streak',
+      'post /v1/devices/{deviceId}/readings',
+      'put /v1/accounts/{accountId}/goal',
+    ]);
   });
 
   it('sert l’interface Swagger UI', async () => {

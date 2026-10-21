@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module.js';
+import { ClockModule } from './clock/clock.module.js';
 import { parseEnvironment } from './config/environment.js';
 import { DailyStepsModule } from './daily-steps/daily-steps.module.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -16,6 +18,8 @@ import { StreakModule } from './streak/streak.module.js';
     // Validation de l'environnement au démarrage : une variable absente ou invalide
     // arrête l'application avec un message explicite (« fail fast »).
     ConfigModule.forRoot({ isGlobal: true, validate: parseEnvironment }),
+    ClockModule,
+    AuthModule,
     DatabaseModule,
     HealthModule,
     DevicesModule,

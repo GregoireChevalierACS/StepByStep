@@ -3,12 +3,11 @@ import type { DeviceRepository, RegisteredDevice } from '../devices/device.repos
 
 /** Adapter en mémoire de DeviceRepository, pour les tests unitaires (tenu par le contrat). */
 export class InMemoryDeviceRepository implements DeviceRepository {
-  /** Appareil → compte. */
-  private readonly devices = new Map<string, string>();
+  private readonly devices = new Map<string, { accountId: string; secretHash: string }>();
 
-  registerWithNewAccount(): Promise<RegisteredDevice> {
+  registerWithNewAccount(secretHash: string): Promise<RegisteredDevice> {
     const registered = { accountId: randomUUID(), deviceId: randomUUID() };
-    this.devices.set(registered.deviceId, registered.accountId);
+    this.devices.set(registered.deviceId, { accountId: registered.accountId, secretHash });
     return Promise.resolve(registered);
   }
 
@@ -17,11 +16,15 @@ export class InMemoryDeviceRepository implements DeviceRepository {
   }
 
   accountOf(deviceId: string): Promise<string | undefined> {
-    return Promise.resolve(this.devices.get(deviceId));
+    return Promise.resolve(this.devices.get(deviceId)?.accountId);
+  }
+
+  secretHashOf(deviceId: string): Promise<string | undefined> {
+    return Promise.resolve(this.devices.get(deviceId)?.secretHash);
   }
 
   /** Comptes créés avec les appareils : partagés avec InMemoryAccountRepository. */
   hasAccount(accountId: string): boolean {
-    return [...this.devices.values()].includes(accountId);
+    return [...this.devices.values()].some((device) => device.accountId === accountId);
   }
 }

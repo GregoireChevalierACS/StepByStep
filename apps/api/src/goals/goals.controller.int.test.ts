@@ -1,24 +1,30 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
+import { FORBIDDEN_PROBLEM_TYPE } from '../auth/auth-errors.js';
 import { configureApp } from '../configure-app.js';
+import { AccountEntity } from '../database/entities/account.entity.js';
+import { registerAuthenticatedDevice } from '../testing/authenticated-device.js';
 
 type App = Parameters<typeof request>[0];
 
 describe('PUT /v1/accounts/:accountId/goal', () => {
   let app: INestApplication<App>;
 
-  const newAccount = async (): Promise<string> =>
-    (
-      (await request(app.getHttpServer()).post('/v1/devices').expect(201)).body as {
-        accountId: string;
-      }
-    ).accountId;
-  const setGoal = (accountId: string, body: unknown) =>
+  // Jeton d'un appareil de chaque compte créé : `setGoal` l'utilise pour le compte de l'URL.
+  const authorizations = new Map<string, string>();
+  const newAccount = async (): Promise<string> => {
+    const { accountId, authorization } = await registerAuthenticatedDevice(app.getHttpServer());
+    authorizations.set(accountId, authorization);
+    return accountId;
+  };
+  const setGoal = (accountId: string, body: unknown, authorization?: string) =>
     request(app.getHttpServer())
       .put(`/v1/accounts/${accountId}/goal`)
+      .set('Authorization', authorization ?? authorizations.get(accountId) ?? '')
       .send(body as object);
 
   beforeAll(async () => {
@@ -103,12 +109,30 @@ describe('PUT /v1/accounts/:accountId/goal', () => {
       await setGoal(await newAccount(), body).expect(400);
     });
 
-    it('400 pour un identifiant de compte qui n’est pas un UUID', async () => {
-      await setGoal('pas-un-uuid', { goal: 10_000, effectiveFrom: '2026-10-01' }).expect(400);
+    it('403 avec le jeton d’un appareil d’un autre compte', async () => {
+      const accountId = await newAccount();
+      const otherAuthorization = authorizations.get(await newAccount()) ?? '';
+
+      const response = await setGoal(
+        accountId,
+        { goal: 10_000, effectiveFrom: '2026-10-01' },
+        otherAuthorization,
+      ).expect(403);
+
+      expect(response.body).toMatchObject({ type: FORBIDDEN_PROBLEM_TYPE });
     });
 
-    it('404 pour un compte inconnu', async () => {
-      const response = await setGoal('00000000-0000-4000-8000-000000000000', {
+    it('401 sans jeton', async () => {
+      await setGoal(await newAccount(), { goal: 10_000, effectiveFrom: '2026-10-01' }, '').expect(
+        401,
+      );
+    });
+
+    it('404 pour un compte supprimé dont le jeton est encore valide', async () => {
+      const accountId = await newAccount();
+      await app.get(DataSource).getRepository(AccountEntity).delete({ id: accountId });
+
+      const response = await setGoal(accountId, {
         goal: 10_000,
         effectiveFrom: '2026-10-01',
       }).expect(404);
