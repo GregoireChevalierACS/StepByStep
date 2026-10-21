@@ -4,9 +4,14 @@ import { useState } from 'react';
 import { Button, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ReadingSync, type ApiResponse } from './application/ReadingSync';
-import { loadSyncState, saveSyncState } from './infrastructure/fileSyncStateStore';
+import { loadSyncState, saveSyncState } from './infrastructure/secureSyncStateStore';
 import { readStepCounter } from './infrastructure/readStepCounter';
-import { checkHealth, registerDevice, sendReadings } from './infrastructure/stepByStepApi';
+import {
+  checkHealth,
+  registerDevice,
+  requestToken,
+  sendReadings,
+} from './infrastructure/stepByStepApi';
 import { describeResponse } from './presentation/describeResponse';
 import { localDay, stepsOfDay } from './presentation/stepsOfDay';
 
@@ -38,10 +43,12 @@ export function App() {
     () =>
       new ReadingSync({
         registerDevice,
+        requestToken,
         sendReadings,
         loadState: loadSyncState,
         saveState: saveSyncState,
         currentTimeZone: deviceTimeZone,
+        now: () => Date.now(),
       }),
   );
 

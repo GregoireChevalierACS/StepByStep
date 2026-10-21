@@ -18,6 +18,6 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "plugins": ["expo-status-bar"]
+    "plugins": ["expo-status-bar", "expo-secure-store"]
   }
 }
