@@ -30,7 +30,10 @@ export class DeviceAuthGuard implements CanActivate {
     const { headers, params } = http.getRequest<HttpRequest>();
     const authorization = headers['authorization'];
     const token = typeof authorization === 'string' ? BEARER.exec(authorization)?.[1] : undefined;
-    const claims = token === undefined ? undefined : await this.tokens.verify(token);
+    // Vérification inconditionnelle : aucune valeur fournie par l'appelant ne décide si elle a
+    // lieu (une chaîne vide est refusée comme tout jeton invalide). Le choix du message, lui,
+    // n'intervient qu'après, sur le chemin du refus.
+    const claims = await this.tokens.verify(token ?? '');
     if (claims === undefined) {
       http.getResponse<HttpResponse>().setHeader('WWW-Authenticate', 'Bearer');
       throw unauthenticatedException(
