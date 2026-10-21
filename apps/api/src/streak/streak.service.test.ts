@@ -7,6 +7,7 @@ import { InMemoryGoalRepository } from '../testing/in-memory-goal.repository.js'
 import { InMemoryTimeZoneRepository } from '../testing/in-memory-time-zone.repository.js';
 import { unwrap } from '../testing/unwrap.js';
 import { StreakService } from './streak.service.js';
+import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 // « Maintenant » figé : le 12/10/2026 à 10:00 à Paris.
 const NOW = Date.parse('2026-10-12T08:00:00Z');
@@ -30,7 +31,7 @@ const setup = () => {
 describe('StreakService', () => {
   it('compte la série avec l’objectif par défaut tant que le compte n’en a fixé aucun', async () => {
     const { devices, timeZones, dailySteps, service } = setup();
-    const { deviceId } = await devices.registerWithNewAccount();
+    const { deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
     timeZones.given(deviceId, [PARIS]);
     dailySteps.given(deviceId, [
       day('2026-10-10', 10_000),
@@ -45,7 +46,7 @@ describe('StreakService', () => {
 
   it('juge chaque jour avec l’objectif en vigueur ce jour-là', async () => {
     const { devices, timeZones, dailySteps, goals, service } = setup();
-    const { accountId, deviceId } = await devices.registerWithNewAccount();
+    const { accountId, deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
     timeZones.given(deviceId, [PARIS]);
     dailySteps.given(deviceId, [day('2026-10-11', 6000), day('2026-10-12', 6000)]);
     await goals.record(accountId, {
@@ -64,7 +65,7 @@ describe('StreakService', () => {
   it('signale un appareil inconnu, puis un appareil sans fuseau', async () => {
     const { devices, service } = setup();
     const unknown = randomUUID();
-    const { deviceId } = await devices.registerWithNewAccount();
+    const { deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
 
     expect(await service.compute(unknown)).toEqual({
       ok: false,

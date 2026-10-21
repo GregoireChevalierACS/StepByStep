@@ -20,12 +20,14 @@ import { TypeOrmDeviceRepository } from './typeorm-device.repository.js';
 import { TypeOrmGoalRepository } from './typeorm-goal.repository.js';
 import { TypeOrmReadingsUnitOfWork } from './typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './typeorm-time-zone.repository.js';
+import { ANY_SECRET_HASH } from '../../testing/fixtures.js';
 
 // Les adapters PostgreSQL passent les mêmes contrats que les fakes en mémoire. Chaque test
 // travaille sur des appareils et des comptes neufs : pas besoin de vider la base entre deux.
 describe('adapters PostgreSQL (TypeORM)', () => {
   let dataSource: DataSource;
-  const registered = () => new TypeOrmDeviceRepository(dataSource).registerWithNewAccount();
+  const registered = () =>
+    new TypeOrmDeviceRepository(dataSource).registerWithNewAccount(ANY_SECRET_HASH);
   const givenDevice = async () => (await registered()).deviceId;
   const givenAccount = async () => (await registered()).accountId;
 

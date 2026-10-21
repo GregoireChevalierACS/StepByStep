@@ -9,11 +9,13 @@ import { DeviceEntity } from '../entities/device.entity.js';
 export class TypeOrmDeviceRepository implements DeviceRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  registerWithNewAccount(): Promise<RegisteredDevice> {
+  registerWithNewAccount(secretHash: string): Promise<RegisteredDevice> {
     // Les deux insertions forment une transaction : jamais de compte sans appareil.
     return this.dataSource.transaction(async (manager) => {
       const account = await manager.getRepository(AccountEntity).save({});
-      const device = await manager.getRepository(DeviceEntity).save({ accountId: account.id });
+      const device = await manager
+        .getRepository(DeviceEntity)
+        .save({ accountId: account.id, secretHash });
       return { accountId: account.id, deviceId: device.id };
     });
   }
@@ -25,5 +27,10 @@ export class TypeOrmDeviceRepository implements DeviceRepository {
   async accountOf(deviceId: string): Promise<string | undefined> {
     const device = await this.dataSource.getRepository(DeviceEntity).findOneBy({ id: deviceId });
     return device?.accountId;
+  }
+
+  async secretHashOf(deviceId: string): Promise<string | undefined> {
+    const device = await this.dataSource.getRepository(DeviceEntity).findOneBy({ id: deviceId });
+    return device?.secretHash ?? undefined;
   }
 }

@@ -9,6 +9,14 @@ import { localDateSchema, uuidSchema } from './schemas.js';
 export const registeredDeviceResponse = z.strictObject({
   accountId: uuidSchema,
   deviceId: uuidSchema,
+  // Renvoyé une seule fois : l'appareil le conserve pour obtenir ses jetons.
+  secret: z.string(),
+});
+
+export const deviceTokenResponse = z.strictObject({
+  token: z.string(),
+  tokenType: z.literal('Bearer'),
+  expiresIn: z.number().int().positive(),
 });
 
 export const dayTotalResponse = z.strictObject({

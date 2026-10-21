@@ -1,10 +1,14 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
+import { FORBIDDEN_PROBLEM_TYPE, UNAUTHENTICATED_PROBLEM_TYPE } from '../auth/auth-errors.js';
 import { configureApp } from '../configure-app.js';
+import { DeviceEntity } from '../database/entities/device.entity.js';
 import { DEVICE_NOT_FOUND_PROBLEM_TYPE } from '../devices/device-errors.js';
+import { registerAuthenticatedDevice } from '../testing/authenticated-device.js';
 
 type App = Parameters<typeof request>[0];
 
@@ -20,15 +24,19 @@ const batch = {
 describe('POST /v1/devices/:deviceId/readings', () => {
   let app: INestApplication<App>;
 
-  const newDevice = async (): Promise<string> =>
-    (
-      (await request(app.getHttpServer()).post('/v1/devices').expect(201)).body as {
-        deviceId: string;
-      }
-    ).deviceId;
-  const send = (deviceId: string, body: unknown) =>
+  // Jeton de chaque appareil enregistré : `send` l'utilise pour l'appareil de l'URL.
+  const authorizations = new Map<string, string>();
+  let someAuthorization = '';
+  const newDevice = async (): Promise<string> => {
+    const { deviceId, authorization } = await registerAuthenticatedDevice(app.getHttpServer());
+    authorizations.set(deviceId, authorization);
+    someAuthorization = authorization;
+    return deviceId;
+  };
+  const send = (deviceId: string, body: unknown, authorization?: string) =>
     request(app.getHttpServer())
       .post(`/v1/devices/${deviceId}/readings`)
+      .set('Authorization', authorization ?? authorizations.get(deviceId) ?? someAuthorization)
       .send(body as object);
 
   beforeAll(async () => {
@@ -98,20 +106,43 @@ describe('POST /v1/devices/:deviceId/readings', () => {
       expect(response.body).toMatchObject({ status: 400, errors: expect.any(Array) as unknown });
     });
 
-    it('400 pour un identifiant d’appareil qui n’est pas un UUID', async () => {
-      await send('pas-un-uuid', batch).expect(400);
-    });
+    it('404 pour un appareil supprimé dont le jeton est encore valide, avec un type testable', async () => {
+      const deviceId = await newDevice();
+      await app.get(DataSource).getRepository(DeviceEntity).delete({ id: deviceId });
 
-    it('404 pour un appareil inconnu, avec un type de problème que le client peut tester', async () => {
-      const response = await send('00000000-0000-4000-8000-000000000000', batch).expect(404);
+      const response = await send(deviceId, batch).expect(404);
 
       // Le type prouve que la route existe et que c'est bien l'appareil qui est inconnu ; c'est
       // lui, pas le texte de `detail`, que l'app teste pour réenregistrer l'appareil.
       expect(response.body).toMatchObject({
         type: DEVICE_NOT_FOUND_PROBLEM_TYPE,
         title: 'Appareil inconnu',
-        detail: expect.stringContaining('00000000-0000-4000-8000-000000000000') as string,
+        detail: expect.stringContaining(deviceId) as string,
       });
+    });
+  });
+
+  describe('authentification', () => {
+    it('401 sans jeton, avec WWW-Authenticate', async () => {
+      const deviceId = await newDevice();
+
+      const response = await request(app.getHttpServer())
+        .post(`/v1/devices/${deviceId}/readings`)
+        .send(batch)
+        .expect(401);
+
+      expect(response.headers['www-authenticate']).toBe('Bearer');
+      expect(response.body).toMatchObject({ type: UNAUTHENTICATED_PROBLEM_TYPE, status: 401 });
+    });
+
+    it('403 avec le jeton d’un autre appareil, même pour une URL mal formée', async () => {
+      const deviceId = await newDevice();
+      const otherAuthorization = authorizations.get(await newDevice()) ?? '';
+
+      for (const target of [deviceId, 'pas-un-uuid']) {
+        const response = await send(target, batch, otherAuthorization).expect(403);
+        expect(response.body).toMatchObject({ type: FORBIDDEN_PROBLEM_TYPE });
+      }
     });
 
     it('422 quand le domaine refuse une valeur, avec le chemin du relevé fautif', async () => {

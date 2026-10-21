@@ -16,12 +16,14 @@ import {
   type InMemoryStores,
 } from './in-memory-readings-unit-of-work.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
+import { ANY_SECRET_HASH } from './fixtures.js';
 
 // Les fakes des tests unitaires passent les mêmes contrats que les adapters PostgreSQL.
 describe('adapters en mémoire', () => {
   let devices: InMemoryDeviceRepository;
-  const givenDevice = async () => (await devices.registerWithNewAccount()).deviceId;
-  const givenAccount = async () => (await devices.registerWithNewAccount()).accountId;
+  const givenDevice = async () => (await devices.registerWithNewAccount(ANY_SECRET_HASH)).deviceId;
+  const givenAccount = async () =>
+    (await devices.registerWithNewAccount(ANY_SECRET_HASH)).accountId;
 
   beforeEach(() => {
     devices = new InMemoryDeviceRepository();

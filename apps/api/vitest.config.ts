@@ -9,7 +9,11 @@ export default defineConfig({
   test: {
     // Relais de l'outbox désactivé : sinon, chaque test qui démarre l'application publierait en
     // arrière-plan des événements écrits par d'autres tests, au hasard du calendrier.
-    env: { NODE_ENV: 'test', OUTBOX_RELAY_INTERVAL_MS: '0' },
+    env: {
+      NODE_ENV: 'test',
+      OUTBOX_RELAY_INTERVAL_MS: '0',
+      JWT_SECRET: 'cle-de-signature-reservee-aux-tests-de-l-api',
+    },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

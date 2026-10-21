@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../configure-app.js';
+import { registerAuthenticatedDevice } from '../testing/authenticated-device.js';
 
 type App = Parameters<typeof request>[0];
 
@@ -54,10 +55,22 @@ describe('Synchronisation de bout en bout : doublons, désordre, redémarrage, c
   let app: INestApplication<App>;
 
   const http = () => request(app.getHttpServer());
-  const newDevice = async (): Promise<string> =>
-    ((await http().post('/v1/devices').expect(201)).body as { deviceId: string }).deviceId;
+  // Comme l'app : enregistrement, échange du secret contre un jeton, puis appels authentifiés.
+  const authorizations = new Map<string, string>();
+  const newDevice = async (): Promise<string> => {
+    const { deviceId, authorization } = await registerAuthenticatedDevice(app.getHttpServer());
+    authorizations.set(deviceId, authorization);
+    return deviceId;
+  };
+  const authorizationOf = (deviceId: string) => authorizations.get(deviceId) ?? '';
   const send = async (deviceId: string, body: object) =>
-    (await http().post(`/v1/devices/${deviceId}/readings`).send(body).expect(200)).body as {
+    (
+      await http()
+        .post(`/v1/devices/${deviceId}/readings`)
+        .set('Authorization', authorizationOf(deviceId))
+        .send(body)
+        .expect(200)
+    ).body as {
       accepted: number;
       duplicates: number;
     };
@@ -65,6 +78,7 @@ describe('Synchronisation de bout en bout : doublons, désordre, redémarrage, c
     (
       await http()
         .get(`/v1/devices/${deviceId}/daily-steps`)
+        .set('Authorization', authorizationOf(deviceId))
         .query({ from: '2026-10-05', to: '2026-10-07' })
         .expect(200)
     ).body as unknown;

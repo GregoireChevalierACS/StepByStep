@@ -7,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { DeviceAuthenticated } from '../auth/device-authenticated.decorator.js';
 import { goalHistoryResponse } from '../http/contract.js';
 import { ApiProblems, openApiSchema } from '../http/openapi.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
@@ -14,6 +15,7 @@ import { type GoalHistoryEntry, GoalsService } from './goals.service.js';
 import { accountIdParam, setGoalBody, type SetGoalBody, toGoalChange } from './set-goal.dto.js';
 
 @ApiTags('Objectif')
+@DeviceAuthenticated()
 @Controller({ path: 'accounts/:accountId/goal', version: '1' })
 export class GoalsController {
   constructor(private readonly goals: GoalsService) {}

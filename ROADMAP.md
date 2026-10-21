@@ -238,7 +238,7 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 
 **8b : extensions, par ordre de priorité**
 
-1. **Authentification** (JWT) : un compte rattache plusieurs appareils. *À décider avant :* la règle d'agrégation des pas d'un compte qui a plusieurs appareils le même jour (additionner compterait deux fois les pas d'un utilisateur qui porte deux téléphones ; maximum par jour ou appareil principal ?).
+1. **Authentification** (JWT) : un compte rattache plusieurs appareils. *Fait côté API (ADR 0002, décision 15) : secret d'appareil échangé contre un jeton de 15 minutes, garde sur les routes d'appareil et de compte. Reste l'app mobile (stockage du secret, renouvellement du jeton).* *À décider avant :* la règle d'agrégation des pas d'un compte qui a plusieurs appareils le même jour (additionner compterait deux fois les pas d'un utilisateur qui porte deux téléphones ; maximum par jour ou appareil principal ?).
 2. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
 3. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
 4. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.

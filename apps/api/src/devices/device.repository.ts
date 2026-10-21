@@ -9,11 +9,16 @@ export interface RegisteredDevice {
  * dans les tests unitaires ; une même suite de contrat garantit qu'ils se comportent pareil.
  */
 export interface DeviceRepository {
-  /** Crée un compte et son premier appareil, atomiquement : jamais de compte sans appareil. */
-  registerWithNewAccount(): Promise<RegisteredDevice>;
+  /**
+   * Crée un compte et son premier appareil, atomiquement : jamais de compte sans appareil.
+   * L'appareil est enregistré avec l'empreinte de son secret, jamais avec le secret lui-même.
+   */
+  registerWithNewAccount(secretHash: string): Promise<RegisteredDevice>;
   exists(deviceId: string): Promise<boolean>;
   /** Compte de l'appareil ; `undefined` pour un appareil inconnu. */
   accountOf(deviceId: string): Promise<string | undefined>;
+  /** Empreinte du secret de l'appareil ; `undefined` s'il est inconnu ou sans secret. */
+  secretHashOf(deviceId: string): Promise<string | undefined>;
 }
 
 /** Jeton d'injection NestJS : une interface TypeScript n'existe plus à l'exécution. */

@@ -12,6 +12,7 @@ import { unwrap } from '../testing/unwrap.js';
 import type { EventPublisher } from './event-publisher.js';
 import type { OutboxEvent } from './outbox-event.js';
 import { OutboxRelay } from './outbox-relay.js';
+import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 const reading = (instant: string, stepsSinceBoot: number) =>
   unwrap(StepCounterReading.create({ stepsSinceBoot, bootCount: 7, takenAt: Date.parse(instant) }));
@@ -50,7 +51,9 @@ describe('outbox de bout en bout : de l’envoi des relevés à la publication',
       intervalMs: 0,
       batchSize: 100,
     });
-    const { deviceId } = await new TypeOrmDeviceRepository(dataSource).registerWithNewAccount();
+    const { deviceId } = await new TypeOrmDeviceRepository(dataSource).registerWithNewAccount(
+      ANY_SECRET_HASH,
+    );
 
     unwrap(
       await service.record({

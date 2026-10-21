@@ -1,16 +1,16 @@
-// Applique ou annule les migrations sur la base de DATABASE_URL (validée comme au démarrage
-// de l'API). Compilé avec l'API : aucune dépendance supplémentaire en production.
+// Applique ou annule les migrations sur la base de DATABASE_URL (validée par le même schéma
+// qu'au démarrage de l'API, sans exiger le reste de sa configuration). Compilé avec l'API : aucune dépendance supplémentaire en production.
 // Usage : node dist/database/migrate.js <run | revert | status>
 import 'reflect-metadata';
 import { existsSync } from 'node:fs';
 import { DataSource } from 'typeorm';
-import { parseEnvironment } from '../config/environment.js';
+import { parseDatabaseEnvironment } from '../config/environment.js';
 import { dataSourceOptions } from './data-source-options.js';
 
 // En local, la configuration est dans .env (en production, dans l'environnement).
 if (existsSync('.env')) process.loadEnvFile('.env');
 
-const { DATABASE_URL } = parseEnvironment(process.env);
+const { DATABASE_URL } = parseDatabaseEnvironment(process.env);
 const command = process.argv[2];
 const dataSource = await new DataSource(dataSourceOptions(DATABASE_URL)).initialize();
 

@@ -26,4 +26,9 @@ export class DeviceEntity {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
+
+  // Empreinte scrypt du secret de l'appareil, jamais le secret. NULL pour les appareils créés
+  // avant l'authentification : ils ne peuvent pas obtenir de jeton et doivent se réenregistrer.
+  @Column({ name: 'secret_hash', type: 'text', nullable: true })
+  secretHash!: string | null;
 }
