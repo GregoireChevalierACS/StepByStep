@@ -16,7 +16,7 @@
     "db:status": "node dist/database/migrate.js status"
   },
   "dependencies": {
-    "@nestjs/common": "^12.1.2",
+    "@nestjs/common": "^12.2.0",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",
