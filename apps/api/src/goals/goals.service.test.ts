@@ -2,19 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { DailyGoal, type GoalChange, LocalDate } from '@stepbystep/domain';
 import { describe, expect, it } from 'vitest';
 import { InMemoryAccountRepository } from '../testing/in-memory-account.repository.js';
-import { InMemoryDeviceRepository } from '../testing/in-memory-device.repository.js';
-import { InMemoryGoalRepository } from '../testing/in-memory-goal.repository.js';
+import { inMemoryStores } from '../testing/in-memory-stores.js';
 import { unwrap } from '../testing/unwrap.js';
 import { GoalsService } from './goals.service.js';
 import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 
 const setup = () => {
-  const devices = new InMemoryDeviceRepository();
-  const service = new GoalsService(
-    new InMemoryAccountRepository(devices),
-    new InMemoryGoalRepository(),
-  );
-  return { devices, service };
+  const stores = inMemoryStores();
+  const service = new GoalsService(new InMemoryAccountRepository(stores), stores.goals);
+  return { devices: stores.devices, service };
 };
 const change = (effectiveFrom: string, goal: number): GoalChange => ({
   effectiveFrom: unwrap(LocalDate.create(effectiveFrom)),

@@ -30,6 +30,19 @@ describe('adapters PostgreSQL (TypeORM)', () => {
     new TypeOrmDeviceRepository(dataSource).registerWithNewAccount(ANY_SECRET_HASH);
   const givenDevice = async () => (await registered()).deviceId;
   const givenAccount = async () => (await registered()).accountId;
+  const storedEvents = async (deviceId: string): Promise<OutboxEvent[]> =>
+    (
+      await dataSource
+        .getRepository(OutboxEventEntity)
+        .createQueryBuilder('event')
+        .where('event.event_key LIKE :pattern', { pattern: `%${deviceId}%` })
+        .getMany()
+    ).map(({ eventKey, type, payload }) => ({
+      key: eventKey,
+      type,
+      // jsonb relu tel qu'écrit : le contrat compare le contenu.
+      payload: payload as OutboxEvent['payload'],
+    }));
 
   beforeAll(async () => {
     dataSource = await new DataSource(dataSourceOptions(inject('databaseUrl'))).initialize();
@@ -47,6 +60,12 @@ describe('adapters PostgreSQL (TypeORM)', () => {
     accountRepositoryContract(() => ({
       repository: new TypeOrmAccountRepository(dataSource),
       givenAccount,
+      devices: new TypeOrmDeviceRepository(dataSource),
+      goals: new TypeOrmGoalRepository(dataSource),
+      timeZones: new TypeOrmTimeZoneRepository(dataSource),
+      dailySteps: new TypeOrmDailyStepsRepository(dataSource),
+      unitOfWork: new TypeOrmReadingsUnitOfWork(dataSource),
+      storedEvents,
     }));
   });
 
@@ -79,19 +98,7 @@ describe('adapters PostgreSQL (TypeORM)', () => {
         if (accountId === undefined) throw new Error('Appareil de test inconnu');
         await new TypeOrmGoalRepository(dataSource).record(accountId, change);
       },
-      storedEvents: async (deviceId) =>
-        (
-          await dataSource
-            .getRepository(OutboxEventEntity)
-            .createQueryBuilder('event')
-            .where('event.event_key LIKE :pattern', { pattern: `%${deviceId}%` })
-            .getMany()
-        ).map(({ eventKey, type, payload }) => ({
-          key: eventKey,
-          type,
-          // jsonb relu tel qu'écrit : le contrat compare le contenu.
-          payload: payload as OutboxEvent['payload'],
-        })),
+      storedEvents,
     }));
   });
 

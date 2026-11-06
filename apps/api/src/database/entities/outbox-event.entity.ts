@@ -1,4 +1,14 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
+import { DeviceEntity } from './device.entity.js';
 
 /**
  * Outbox transactionnelle : un événement de domaine est écrit ici dans la même transaction que
@@ -30,4 +40,16 @@ export class OutboxEventEntity {
   // Renseigné par le relais une fois l'événement publié ; NULL tant qu'il reste à publier.
   @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
   publishedAt!: Date | null;
+
+  // Appareil dont les données ont produit l'événement. La clé étrangère étend l'invariant de
+  // l'outbox à l'effacement : supprimer l'appareil (ou son compte) supprime ses événements, qui
+  // contiennent des données de pas. NULL pour un événement qui ne concerne aucun appareil.
+  // Indexé : sans index, chaque suppression d'appareil parcourrait toute l'outbox.
+  @Index('IDX_outbox_events_device_id')
+  @Column({ name: 'device_id', type: 'uuid', nullable: true })
+  deviceId!: string | null;
+
+  @ManyToOne(() => DeviceEntity, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'device_id' })
+  device?: DeviceEntity;
 }

@@ -13,4 +13,9 @@ export class InMemoryTimeZoneRepository implements TimeZoneRepository {
   periodsOf(deviceId: string): Promise<TimeZonePeriod[]> {
     return Promise.resolve([...(this.periods.get(deviceId) ?? [])]);
   }
+
+  /** Efface les périodes d'un appareil supprimé (clé étrangère ON DELETE CASCADE en base). */
+  forgetDevice(deviceId: string): void {
+    this.periods.delete(deviceId);
+  }
 }

@@ -10,24 +10,11 @@ import {
 import type { DeviceNotFound } from '../devices/device-errors.js';
 import type { OutboxEvent } from '../events/outbox-event.js';
 import type { DeviceLedger, ReadingsUnitOfWork } from '../readings/readings-unit-of-work.js';
-import type { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository.js';
-import type { InMemoryDeviceRepository } from './in-memory-device.repository.js';
-import type { InMemoryGoalRepository } from './in-memory-goal.repository.js';
-import type { InMemoryOutbox } from './in-memory-outbox.js';
-import type { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
+import type { InMemoryStores } from './in-memory-stores.js';
 
 // Même identité qu'en base : clé primaire (appareil, instant, démarrage).
 const identityOf = (reading: StepCounterReading) =>
   `${String(reading.takenAt)}:${String(reading.bootCount)}`;
-
-/** Données partagées avec les autres fakes, comme les tables d'une base commune. */
-export interface InMemoryStores {
-  readonly devices: InMemoryDeviceRepository;
-  readonly timeZones: InMemoryTimeZoneRepository;
-  readonly dailySteps: InMemoryDailyStepsRepository;
-  readonly goals: InMemoryGoalRepository;
-  readonly outbox: InMemoryOutbox;
-}
 
 /**
  * Adapter en mémoire de ReadingsUnitOfWork, tenu par le même contrat que l'adapter PostgreSQL.
@@ -72,7 +59,7 @@ export class InMemoryReadingsUnitOfWork implements ReadingsUnitOfWork {
     this.stores.timeZones.given(deviceId, ledger.newPeriods);
     this.readings.set(deviceId, [...(this.readings.get(deviceId) ?? []), ...ledger.newReadings]);
     this.stores.dailySteps.given(deviceId, [...ledger.savedDays.values()]);
-    this.stores.outbox.append(ledger.newEvents);
+    this.stores.outbox.append(ledger.newEvents, deviceId);
   }
 }
 

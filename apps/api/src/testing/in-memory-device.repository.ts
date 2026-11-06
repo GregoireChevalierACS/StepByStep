@@ -27,4 +27,13 @@ export class InMemoryDeviceRepository implements DeviceRepository {
   hasAccount(accountId: string): boolean {
     return [...this.devices.values()].some((device) => device.accountId === accountId);
   }
+
+  /** Supprime les appareils d'un compte et renvoie leurs identifiants (pour la cascade). */
+  forgetAccount(accountId: string): string[] {
+    const forgotten = [...this.devices]
+      .filter(([, device]) => device.accountId === accountId)
+      .map(([deviceId]) => deviceId);
+    for (const deviceId of forgotten) this.devices.delete(deviceId);
+    return forgotten;
+  }
 }

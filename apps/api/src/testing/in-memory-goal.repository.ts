@@ -16,4 +16,9 @@ export class InMemoryGoalRepository implements GoalRepository {
   changesOf(accountId: string): Promise<GoalChange[]> {
     return Promise.resolve([...(this.changes.get(accountId)?.values() ?? [])]);
   }
+
+  /** Efface les objectifs d'un compte supprimé (clé étrangère ON DELETE CASCADE en base). */
+  forgetAccount(accountId: string): void {
+    this.changes.delete(accountId);
+  }
 }

@@ -10,13 +10,29 @@ export class InMemoryOutbox implements Outbox {
   private readonly events = new Map<string, PendingEvent>();
   private readonly published = new Set<string>();
   private readonly reserved = new Set<string>();
+  /** Clé de l'événement → appareil qui l'a produit (colonne device_id en base). */
+  private readonly deviceOf = new Map<string, string>();
   private nextId = 1;
 
-  /** Ajoute les événements ; une clé déjà connue est ignorée (contrainte unique en base). */
-  append(events: readonly OutboxEvent[]): void {
+  /**
+   * Ajoute les événements ; une clé déjà connue est ignorée (contrainte unique en base).
+   * `deviceId` : appareil qui les a produits, avec lequel ils seront effacés.
+   */
+  append(events: readonly OutboxEvent[], deviceId?: string): void {
     for (const event of events) {
       if (this.events.has(event.key)) continue;
       this.events.set(event.key, { ...event, id: String(this.nextId++) });
+      if (deviceId !== undefined) this.deviceOf.set(event.key, deviceId);
+    }
+  }
+
+  /** Efface les événements d'un appareil supprimé (clé étrangère ON DELETE CASCADE en base). */
+  forgetDevice(deviceId: string): void {
+    for (const [key, owner] of this.deviceOf) {
+      if (owner !== deviceId) continue;
+      this.events.delete(key);
+      this.published.delete(key);
+      this.deviceOf.delete(key);
     }
   }
 
