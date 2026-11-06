@@ -147,12 +147,18 @@ class TypeOrmDeviceLedger implements DeviceLedger {
   async appendEvents(events: readonly OutboxEvent[]): Promise<void> {
     if (events.length === 0) return;
     // ON CONFLICT DO NOTHING sur la clé métier : un événement déjà enregistré est ignoré.
+    // Rattaché à l'appareil : il sera effacé avec lui (clé étrangère ON DELETE CASCADE).
     await this.manager
       .createQueryBuilder()
       .insert()
       .into(OutboxEventEntity)
       .values(
-        events.map(({ key, type, payload }) => ({ eventKey: key, type, payload: { ...payload } })),
+        events.map(({ key, type, payload }) => ({
+          eventKey: key,
+          type,
+          payload: { ...payload },
+          deviceId: this.deviceId,
+        })),
       )
       .orIgnore()
       .execute();

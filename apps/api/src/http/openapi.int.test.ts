@@ -47,6 +47,7 @@ describe('documentation OpenAPI', () => {
         .flatMap(([path, methods]) => Object.keys(methods).map((method) => `${method} ${path}`))
         .sort(),
     ).toEqual([
+      'delete /v1/accounts/{accountId}',
       'get /v1/devices/{deviceId}/daily-steps',
       'get /v1/devices/{deviceId}/streak',
       'get /v1/health',
@@ -79,6 +80,7 @@ describe('documentation OpenAPI', () => {
       .sort();
 
     expect(protectedRoutes).toEqual([
+      'delete /v1/accounts/{accountId}',
       'get /v1/devices/{deviceId}/daily-steps',
       'get /v1/devices/{deviceId}/streak',
       'post /v1/devices/{deviceId}/readings',

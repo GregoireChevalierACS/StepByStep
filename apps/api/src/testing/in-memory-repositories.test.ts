@@ -11,10 +11,8 @@ import { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository
 import { InMemoryDeviceRepository } from './in-memory-device.repository.js';
 import { InMemoryGoalRepository } from './in-memory-goal.repository.js';
 import { InMemoryOutbox } from './in-memory-outbox.js';
-import {
-  InMemoryReadingsUnitOfWork,
-  type InMemoryStores,
-} from './in-memory-readings-unit-of-work.js';
+import { InMemoryReadingsUnitOfWork } from './in-memory-readings-unit-of-work.js';
+import { type InMemoryStores, inMemoryStores } from './in-memory-stores.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
 import { ANY_SECRET_HASH } from './fixtures.js';
 
@@ -34,10 +32,20 @@ describe('adapters en mémoire', () => {
   });
 
   describe('InMemoryAccountRepository', () => {
-    accountRepositoryContract(() => ({
-      repository: new InMemoryAccountRepository(devices),
-      givenAccount,
-    }));
+    accountRepositoryContract(() => {
+      const stores = inMemoryStores(devices);
+      return {
+        repository: new InMemoryAccountRepository(stores),
+        givenAccount,
+        devices,
+        goals: stores.goals,
+        timeZones: stores.timeZones,
+        dailySteps: stores.dailySteps,
+        unitOfWork: new InMemoryReadingsUnitOfWork(stores),
+        storedEvents: (deviceId) =>
+          Promise.resolve(stores.outbox.all().filter(({ key }) => key.includes(deviceId))),
+      };
+    });
   });
 
   describe('InMemoryDailyStepsRepository', () => {
@@ -69,13 +77,7 @@ describe('adapters en mémoire', () => {
     let stores: InMemoryStores;
     let unitOfWork: InMemoryReadingsUnitOfWork;
     beforeEach(() => {
-      stores = {
-        devices,
-        timeZones: new InMemoryTimeZoneRepository(),
-        dailySteps: new InMemoryDailyStepsRepository(),
-        goals: new InMemoryGoalRepository(),
-        outbox: new InMemoryOutbox(),
-      };
+      stores = inMemoryStores(devices);
       unitOfWork = new InMemoryReadingsUnitOfWork(stores);
     });
 

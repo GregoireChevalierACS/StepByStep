@@ -12,6 +12,11 @@ export class InMemoryDailyStepsRepository implements DailyStepsRepository {
     this.days.set(deviceId, known);
   }
 
+  /** Efface les jours d'un appareil supprimé (clé étrangère ON DELETE CASCADE en base). */
+  forgetDevice(deviceId: string): void {
+    this.days.delete(deviceId);
+  }
+
   between(deviceId: string, from: LocalDate, to: LocalDate): Promise<DailySteps[]> {
     return Promise.resolve(
       this.sorted(deviceId).filter(

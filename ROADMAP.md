@@ -239,13 +239,14 @@ Un serveur **facultatif**, activé par l'utilisateur, pour sauvegarder l'histori
 **8b : extensions, par ordre de priorité**
 
 1. **Authentification** (JWT) : un compte rattache plusieurs appareils. *Fait côté API (ADR 0002, décision 15) : secret d'appareil échangé contre un jeton de 15 minutes, garde sur les routes d'appareil et de compte. Fait aussi côté mobile : secret dans le stockage chiffré du système (`expo-secure-store`), jeton gardé en mémoire et renouvelé, réenregistrement si les identifiants sont refusés.* *À décider avant :* la règle d'agrégation des pas d'un compte qui a plusieurs appareils le même jour (additionner compterait deux fois les pas d'un utilisateur qui porte deux téléphones ; maximum par jour ou appareil principal ?).
-2. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
-3. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
-4. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.
-5. `GoalReached` → notification push (Firebase Cloud Messaging) via un **outbox transactionnel**. *Fait jusqu'à la publication (ADR 0002, décision 14) : détection dans le domaine, outbox écrite dans l'unité de travail, relais `SKIP LOCKED`. Reste l'adapter Firebase du port `EventPublisher`, qui journalise pour l'instant.*
-6. Classement en direct par WebSocket (gateway NestJS).
-7. Bilan mensuel en PDF stocké sur S3.
-8. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
+2. **Suppression des données serveur** (engagement de la décision 2 de l'ADR 0002). *Fait côté API (décision 16) :* `DELETE /v1/accounts/{accountId}` efface en une instruction le compte, ses appareils et toutes leurs données, par les clés étrangères `ON DELETE CASCADE`, outbox comprise. Idempotent (204). *Reste côté mobile :* désactiver la synchronisation avant d'appeler la route, sinon le réenregistrement automatique recréerait aussitôt un appareil.
+3. **Requêtes SQL brutes :** série de jours en SQL (*gaps and islands*), avec un test `fast-check` qui vérifie que le SQL et `computeStreak` donnent toujours le même résultat ; index justifiés par `EXPLAIN ANALYZE`.
+4. **Défis entre amis :** groupes, défi hebdomadaire, classement avec `RANK() OVER (PARTITION BY …)`.
+5. **Clôture des défis** par un job planifié (`@nestjs/schedule`), protégé par un verrou (`pg_advisory_lock`, ou Redis si plusieurs services) contre une double exécution.
+6. `GoalReached` → notification push (Firebase Cloud Messaging) via un **outbox transactionnel**. *Fait jusqu'à la publication (ADR 0002, décision 14) : détection dans le domaine, outbox écrite dans l'unité de travail, relais `SKIP LOCKED`. Reste l'adapter Firebase du port `EventPublisher`, qui journalise pour l'instant.*
+7. Classement en direct par WebSocket (gateway NestJS).
+8. Bilan mensuel en PDF stocké sur S3.
+9. Côté mobile : cas d'usage `SyncReadings` + adapter HTTP, avec renvoi des lots en attente quand le réseau revient.
 
 ✅ *8a terminée quand* l'E2E « doublons + désordre + redémarrage + changement de fuseau » passe en CI contre un vrai PostgreSQL, et que la documentation OpenAPI `/v1` est consultable. *Atteint le 2026-10-18.*
 

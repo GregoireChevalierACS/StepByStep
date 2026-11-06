@@ -89,6 +89,13 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
           .expect(200)
       ).body,
     );
+
+    // Fin du parcours : suppression des données serveur, 204 sans corps comme publié.
+    const deletion = await http()
+      .delete(`/v1/accounts/${device.accountId}`)
+      .set('Authorization', authorization)
+      .expect(204);
+    expect(deletion.text).toBe('');
   });
 
   it('renvoie ses erreurs au format Problem Details publié', async () => {
