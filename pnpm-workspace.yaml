@@ -15,10 +15,6 @@ overrides:
 # qu'Expo embarque une version corrigée (vérifier à chaque mise à jour d'Expo).
 auditConfig:
   ignoreGhsas:
-    # node-forge <= 1.4.0 (vérification de signature RSA trop permissive), via expo > @expo/cli :
-    # utilisé seulement pour la signature de code iOS et des manifestes expo-updates, que
-    # l'app (Android seul, sans expo-updates) n'utilise pas.
-    - GHSA-86w9-cpqp-85rv
     # braces <= 3.0.3 (déni de service par motifs imbriqués), via expo > @expo/metro >
     # metro-file-map > micromatch : les motifs viennent de la configuration de Metro, jamais
     # d'une entrée extérieure.
