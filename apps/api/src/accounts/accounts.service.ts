@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { err, type InvalidNickname, Nickname, ok, type Result } from '@stepbystep/domain';
+import type { AccountNotFound } from '../goals/goals.service.js';
 import { ACCOUNT_REPOSITORY, type AccountRepository } from './account.repository.js';
 
 /**
@@ -8,6 +10,23 @@ import { ACCOUNT_REPOSITORY, type AccountRepository } from './account.repository
 @Injectable()
 export class AccountsService {
   constructor(@Inject(ACCOUNT_REPOSITORY) private readonly accounts: AccountRepository) {}
+
+  /**
+   * Fixe le pseudo du compte et renvoie sa forme normalisée (celle qu'afficheront les autres
+   * membres). Idempotent : la même demande renvoyée laisse le même état.
+   */
+  async setNickname(
+    accountId: string,
+    value: string,
+  ): Promise<Result<Nickname, InvalidNickname | AccountNotFound>> {
+    const nickname = Nickname.create(value);
+    if (!nickname.ok) return nickname;
+    if (!(await this.accounts.exists(accountId))) {
+      return err({ kind: 'AccountNotFound', accountId });
+    }
+    await this.accounts.setNickname(accountId, nickname.value);
+    return ok(nickname.value);
+  }
 
   /**
    * Efface le compte et toutes ses données (décision 16). Idempotent : un compte déjà effacé

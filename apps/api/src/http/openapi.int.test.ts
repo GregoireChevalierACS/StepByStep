@@ -55,6 +55,7 @@ describe('documentation OpenAPI', () => {
       'post /v1/devices/{deviceId}/readings',
       'post /v1/devices/{deviceId}/tokens',
       'put /v1/accounts/{accountId}/goal',
+      'put /v1/accounts/{accountId}/nickname',
     ]);
   });
 
@@ -85,6 +86,7 @@ describe('documentation OpenAPI', () => {
       'get /v1/devices/{deviceId}/streak',
       'post /v1/devices/{deviceId}/readings',
       'put /v1/accounts/{accountId}/goal',
+      'put /v1/accounts/{accountId}/nickname',
     ]);
   });
 
