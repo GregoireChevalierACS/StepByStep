@@ -40,8 +40,8 @@ export type StreakError = DeviceNotFound | MissingTimeZone | UnknownTimeZone;
  * Série de jours avec l'objectif atteint, et badges débloqués, pour un appareil. Réunit le
  * domaine : calendrier de l'appareil (« aujourd'hui » dans son fuseau), historique des
  * objectifs (chaque jour jugé avec l'objectif en vigueur ce jour-là), computeStreak et
- * unlockedBadges. Par appareil : la règle d'agrégation multi-appareils n'est pas encore
- * décidée (ADR 0002).
+ * unlockedBadges. Par appareil : la règle d'agrégation multi-appareils (maximum par jour, ADR
+ * 0002 décision 9) n'est pas encore appliquée.
  */
 @Injectable()
 export class StreakService {
