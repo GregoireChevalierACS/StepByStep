@@ -11,6 +11,7 @@ import { OutboxEvents1792520157801 } from './migrations/1792520157801-outbox-eve
 import { OutboxPendingIndex1792520763543 } from './migrations/1792520763543-outbox-pending-index.js';
 import { DeviceSecretHash1792522063512 } from './migrations/1792522063512-device-secret-hash.js';
 import { OutboxEventDevice1793972772855 } from './migrations/1793972772855-outbox-event-device.js';
+import { AccountNickname1794043623119 } from './migrations/1794043623119-account-nickname.js';
 
 // Listes explicites (pas de motifs de fichiers) : vérifiées par TypeScript, insensibles
 // à la différence entre sources .ts et fichiers compilés .js.
@@ -31,6 +32,7 @@ export const MIGRATIONS = [
   OutboxPendingIndex1792520763543,
   DeviceSecretHash1792522063512,
   OutboxEventDevice1793972772855,
+  AccountNickname1794043623119,
 ];
 
 /**

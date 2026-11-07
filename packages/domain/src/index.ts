@@ -11,6 +11,8 @@ export type {
   GoalHistoryError,
 } from './model/GoalHistory';
 export { LocalDate } from './model/LocalDate';
+export { Nickname } from './model/Nickname';
+export type { InvalidNickname } from './model/Nickname';
 export type { InvalidLocalDate } from './model/LocalDate';
 export { StepCount } from './model/StepCount';
 export type { NegativeStepCount, NonIntegerStepCount, StepCountError } from './model/StepCount';

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   DailyGoal,
   LocalDate,
+  Nickname,
   ok,
   StepCount,
   StepCounterReading,
@@ -114,6 +115,28 @@ export const accountRepositoryContract = (fixture: () => AccountRepositoryFixtur
 
     expect(await repository.exists(accountId)).toBe(true);
     expect(await repository.exists(randomUUID())).toBe(false);
+  });
+
+  it('n’a pas de pseudo tant qu’il n’en a pas choisi, puis le garde et le remplace', async () => {
+    const { repository, givenAccount } = fixture();
+    const accountId = await givenAccount();
+    expect(await repository.nicknameOf(accountId)).toBeUndefined();
+
+    await repository.setNickname(accountId, unwrap(Nickname.create('Zoé')));
+    expect((await repository.nicknameOf(accountId))?.value).toBe('Zoé');
+
+    await repository.setNickname(accountId, unwrap(Nickname.create('Zoé la rapide')));
+    expect((await repository.nicknameOf(accountId))?.value).toBe('Zoé la rapide');
+  });
+
+  it('ne donne pas de pseudo à un compte inconnu', async () => {
+    const { repository } = fixture();
+    const unknown = randomUUID();
+
+    await repository.setNickname(unknown, unwrap(Nickname.create('Fantôme')));
+
+    expect(await repository.exists(unknown)).toBe(false);
+    expect(await repository.nicknameOf(unknown)).toBeUndefined();
   });
 
   it('efface le compte et toutes ses données', async () => {

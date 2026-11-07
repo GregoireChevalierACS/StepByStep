@@ -14,6 +14,90 @@ import {
 
 type App = Parameters<typeof request>[0];
 
+describe('PUT /v1/accounts/:accountId/nickname', () => {
+  let app: INestApplication<App>;
+  const setNickname = (device: AuthenticatedDevice, body: unknown, authorization?: string) =>
+    request(app.getHttpServer())
+      .put(`/v1/accounts/${device.accountId}/nickname`)
+      .set('Authorization', authorization ?? device.authorization)
+      .send(body as object);
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = configureApp(moduleRef.createNestApplication<INestApplication<App>>());
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('enregistre le pseudo et renvoie sa forme normalisée', async () => {
+    const device = await registerAuthenticatedDevice(app.getHttpServer());
+
+    const response = await setNickname(device, { nickname: '  Zoé   la rapide ' }).expect(200);
+
+    expect(response.body).toEqual({ nickname: 'Zoé la rapide' });
+    const [row]: [{ nickname: string }] = await app
+      .get(DataSource)
+      .query('SELECT nickname FROM accounts WHERE id = $1', [device.accountId]);
+    expect(row.nickname).toBe('Zoé la rapide');
+  });
+
+  it('est idempotent et remplace le pseudo précédent', async () => {
+    const device = await registerAuthenticatedDevice(app.getHttpServer());
+    await setNickname(device, { nickname: 'Zoé' }).expect(200);
+    await setNickname(device, { nickname: 'Zoé' }).expect(200);
+
+    const response = await setNickname(device, { nickname: 'Zoé la rapide' }).expect(200);
+
+    expect(response.body).toEqual({ nickname: 'Zoé la rapide' });
+  });
+
+  describe('erreurs', () => {
+    it.each([
+      ['trop court', 'ab', 'InvalidNickname:Length'],
+      ['caractère interdit', '<script>', 'InvalidNickname:Characters'],
+    ])('422 pour un pseudo refusé par le domaine (%s)', async (_case, nickname, message) => {
+      const device = await registerAuthenticatedDevice(app.getHttpServer());
+
+      const response = await setNickname(device, { nickname }).expect(422);
+
+      expect(response.body).toMatchObject({ status: 422, errors: [{ path: 'nickname', message }] });
+    });
+
+    it.each([
+      ['sans pseudo', {}],
+      ['avec un pseudo qui n’est pas du texte', { nickname: 42 }],
+    ])('400 pour un corps mal formé : %s', async (_case, body) => {
+      await setNickname(await registerAuthenticatedDevice(app.getHttpServer()), body).expect(400);
+    });
+
+    it('403 avec le jeton d’un appareil d’un autre compte', async () => {
+      const target = await registerAuthenticatedDevice(app.getHttpServer());
+      const other = await registerAuthenticatedDevice(app.getHttpServer());
+
+      const response = await setNickname(
+        target,
+        { nickname: 'Pirate' },
+        other.authorization,
+      ).expect(403);
+
+      expect(response.body).toMatchObject({ type: FORBIDDEN_PROBLEM_TYPE });
+    });
+
+    it('404 pour un compte supprimé dont le jeton est encore valide', async () => {
+      const device = await registerAuthenticatedDevice(app.getHttpServer());
+      await request(app.getHttpServer())
+        .delete(`/v1/accounts/${device.accountId}`)
+        .set('Authorization', device.authorization)
+        .expect(204);
+
+      await setNickname(device, { nickname: 'Fantôme' }).expect(404);
+    });
+  });
+});
+
 describe('DELETE /v1/accounts/:accountId', () => {
   let app: INestApplication<App>;
   const http = () => request(app.getHttpServer());

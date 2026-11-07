@@ -32,6 +32,8 @@ export const recordReadingsResponse = z.strictObject({
 
 export const dailyStepsResponse = z.array(dayTotalResponse);
 
+export const nicknameResponse = z.strictObject({ nickname: z.string() });
+
 export const goalHistoryResponse = z.array(
   z.strictObject({ effectiveFrom: localDateSchema, goal: z.number().int().positive() }),
 );
