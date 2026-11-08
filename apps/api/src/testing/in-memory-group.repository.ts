@@ -62,6 +62,11 @@ export class InMemoryGroupRepository implements GroupRepository {
     );
   }
 
+  /** Membres d'un groupe, dans l'ordre d'arrivée ; `undefined` pour un groupe inconnu. */
+  membersOf(groupId: string): readonly string[] | undefined {
+    return this.groups.get(groupId)?.members;
+  }
+
   /** Retire un compte supprimé de tous ses groupes (clés étrangères ON DELETE CASCADE). */
   forgetAccount(accountId: string): void {
     for (const group of this.groups.values()) this.remove(group, accountId);

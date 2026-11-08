@@ -45,6 +45,15 @@ describe('LocalDate', () => {
     expect(unwrap(LocalDate.create(day)).previous().toString()).toBe(previousDay);
   });
 
+  it.each([
+    ['2026-12-28', 6, '2027-01-03'],
+    ['2026-01-04', -6, '2025-12-29'],
+    ['2028-02-27', 2, '2028-02-29'],
+    ['2026-11-02', 0, '2026-11-02'],
+  ])('%s plus %s jours donne %s', (day, days, expected) => {
+    expect(unwrap(LocalDate.create(day)).plusDays(days).toString()).toBe(expected);
+  });
+
   it('compare deux dates par leur valeur', () => {
     const date = unwrap(LocalDate.create('2026-10-06'));
 

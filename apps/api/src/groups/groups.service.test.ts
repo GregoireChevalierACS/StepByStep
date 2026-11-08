@@ -3,14 +3,16 @@ import { Nickname } from '@stepbystep/domain';
 import { describe, expect, it } from 'vitest';
 import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 import { InMemoryAccountRepository } from '../testing/in-memory-account.repository.js';
+import { InMemoryRankingQuery } from '../testing/in-memory-ranking.query.js';
 import { inMemoryStores } from '../testing/in-memory-stores.js';
+import { dailyStepsOf } from '../testing/contracts/ranking-query.contract.js';
 import { unwrap } from '../testing/unwrap.js';
 import { GroupsService, MAX_GROUP_MEMBERS } from './groups.service.js';
 
 const setup = () => {
   const stores = inMemoryStores();
   const accounts = new InMemoryAccountRepository(stores);
-  const service = new GroupsService(accounts, stores.groups);
+  const service = new GroupsService(accounts, stores.groups, new InMemoryRankingQuery(stores));
   const account = async (nickname?: string) => {
     const { accountId } = await stores.devices.registerWithNewAccount(ANY_SECRET_HASH);
     if (nickname !== undefined) {
@@ -18,7 +20,7 @@ const setup = () => {
     }
     return accountId;
   };
-  return { service, account };
+  return { service, account, stores };
 };
 
 describe('GroupsService', () => {
@@ -78,6 +80,50 @@ describe('GroupsService', () => {
     expect(await service.create(unknown, 'Bureau')).toEqual({
       ok: false,
       error: { kind: 'AccountNotFound', accountId: unknown },
+    });
+  });
+
+  describe('classement', () => {
+    it('classe les membres du groupe sur la semaine, et marque le compte qui demande', async () => {
+      const { service, account, stores } = setup();
+      const zoe = await account('Zoé');
+      const paul = await account('Paul');
+      const { groupId, inviteCode } = unwrap(await service.create(zoe, 'Bureau'));
+      unwrap(await service.join(paul, inviteCode));
+      const [paulPhone] = stores.devices.devicesOf(paul);
+      stores.dailySteps.given(paulPhone ?? '', dailyStepsOf([['2026-11-03', 12_000]]));
+
+      expect(unwrap(await service.ranking(zoe, groupId, '2026-W45'))).toEqual({
+        groupId,
+        week: '2026-W45',
+        from: '2026-11-02',
+        to: '2026-11-08',
+        ranking: [
+          { rank: 1, nickname: 'Paul', steps: 12_000, you: false },
+          { rank: 2, nickname: 'Zoé', steps: 0, you: true },
+        ],
+      });
+    });
+
+    it('ne montre pas le classement d’un groupe dont le compte n’est pas membre', async () => {
+      const { service, account } = setup();
+      const { groupId } = unwrap(await service.create(await account('Zoé'), 'Bureau'));
+
+      expect(await service.ranking(await account('Paul'), groupId, '2026-W45')).toEqual({
+        ok: false,
+        error: { kind: 'GroupNotFound', groupId },
+      });
+    });
+
+    it('refuse une semaine qui n’existe pas', async () => {
+      const { service, account } = setup();
+      const zoe = await account('Zoé');
+      const { groupId } = unwrap(await service.create(zoe, 'Bureau'));
+
+      expect(await service.ranking(zoe, groupId, '2025-W53')).toEqual({
+        ok: false,
+        error: { kind: 'InvalidIsoWeek', value: '2025-W53' },
+      });
     });
   });
 

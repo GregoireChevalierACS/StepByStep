@@ -12,6 +12,7 @@ import {
   groupsResponse,
   nicknameResponse,
   problemDetailsResponse,
+  rankingResponse,
   recordReadingsResponse,
   registeredDeviceResponse,
   streakResponse,
@@ -126,6 +127,15 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
           .post(`/v1/accounts/${device.accountId}/groups/join`)
           .set('Authorization', authorization)
           .send({ inviteCode: group.inviteCode })
+          .expect(200)
+      ).body,
+    );
+
+    rankingResponse.parse(
+      (
+        await http()
+          .get(`/v1/accounts/${device.accountId}/groups/${group.groupId}/ranking?week=2026-W42`)
+          .set('Authorization', authorization)
           .expect(200)
       ).body,
     );

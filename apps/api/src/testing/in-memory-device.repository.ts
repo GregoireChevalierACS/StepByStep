@@ -28,11 +28,23 @@ export class InMemoryDeviceRepository implements DeviceRepository {
     return [...this.devices.values()].some((device) => device.accountId === accountId);
   }
 
-  /** Supprime les appareils d'un compte et renvoie leurs identifiants (pour la cascade). */
-  forgetAccount(accountId: string): string[] {
-    const forgotten = [...this.devices]
+  /** Ajoute un appareil à un compte existant (préparation des tests multi-appareils). */
+  givenDevice(accountId: string): string {
+    const deviceId = randomUUID();
+    this.devices.set(deviceId, { accountId, secretHash: '' });
+    return deviceId;
+  }
+
+  /** Appareils d'un compte (colonne devices.account_id). */
+  devicesOf(accountId: string): string[] {
+    return [...this.devices]
       .filter(([, device]) => device.accountId === accountId)
       .map(([deviceId]) => deviceId);
+  }
+
+  /** Supprime les appareils d'un compte et renvoie leurs identifiants (pour la cascade). */
+  forgetAccount(accountId: string): string[] {
+    const forgotten = this.devicesOf(accountId);
     for (const deviceId of forgotten) this.devices.delete(deviceId);
     return forgotten;
   }
