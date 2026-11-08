@@ -10,6 +10,8 @@ export type {
   GoalChange,
   GoalHistoryError,
 } from './model/GoalHistory';
+export { GroupName } from './model/GroupName';
+export type { InvalidGroupName } from './model/GroupName';
 export { LocalDate } from './model/LocalDate';
 export { Nickname } from './model/Nickname';
 export type { InvalidNickname } from './model/Nickname';

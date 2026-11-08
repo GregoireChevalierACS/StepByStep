@@ -5,6 +5,7 @@ import { accountRepositoryContract } from '../../testing/contracts/account-repos
 import { dailyStepsRepositoryContract } from '../../testing/contracts/daily-steps-repository.contract.js';
 import { deviceRepositoryContract } from '../../testing/contracts/device-repository.contract.js';
 import { goalRepositoryContract } from '../../testing/contracts/goal-repository.contract.js';
+import { groupRepositoryContract } from '../../testing/contracts/group-repository.contract.js';
 import { readingsUnitOfWorkContract } from '../../testing/contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from '../../testing/contracts/time-zone-repository.contract.js';
 import type { OutboxEvent } from '../../events/outbox-event.js';
@@ -18,6 +19,7 @@ import { TypeOrmAccountRepository } from './typeorm-account.repository.js';
 import { TypeOrmDailyStepsRepository } from './typeorm-daily-steps.repository.js';
 import { TypeOrmDeviceRepository } from './typeorm-device.repository.js';
 import { TypeOrmGoalRepository } from './typeorm-goal.repository.js';
+import { TypeOrmGroupRepository } from './typeorm-group.repository.js';
 import { TypeOrmReadingsUnitOfWork } from './typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './typeorm-time-zone.repository.js';
 import { ANY_SECRET_HASH } from '../../testing/fixtures.js';
@@ -66,6 +68,14 @@ describe('adapters PostgreSQL (TypeORM)', () => {
       dailySteps: new TypeOrmDailyStepsRepository(dataSource),
       unitOfWork: new TypeOrmReadingsUnitOfWork(dataSource),
       storedEvents,
+    }));
+  });
+
+  describe('TypeOrmGroupRepository', () => {
+    groupRepositoryContract(() => ({
+      repository: new TypeOrmGroupRepository(dataSource),
+      accounts: new TypeOrmAccountRepository(dataSource),
+      givenAccount,
     }));
   });
 

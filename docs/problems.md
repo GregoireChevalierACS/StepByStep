@@ -51,3 +51,30 @@ Une 404 seule ne suffit pas à conclure : une route mal écrite ou une mauvaise 
 - **Titre** : Accès refusé
 - **Cause** : le jeton est valide, mais pour un autre appareil (routes `/v1/devices/{deviceId}/…`) ou un autre compte (routes `/v1/accounts/{accountId}/…`).
 - **Réaction attendue** : aucune nouvelle tentative ; c'est une erreur du client.
+
+## nickname-required
+
+`https://github.com/GregoireChevalierACS/StepByStep/blob/main/docs/problems.md#nickname-required`
+
+- **Statut** : 409
+- **Titre** : Pseudo requis
+- **Cause** : le compte veut créer ou rejoindre un groupe sans avoir choisi de pseudo : les autres membres ne sauraient pas qui il est.
+- **Réaction attendue** : le client demande un pseudo à l'utilisateur, l'enregistre (`PUT /v1/accounts/{accountId}/nickname`), puis rejoue la requête.
+
+## invite-code-unknown
+
+`https://github.com/GregoireChevalierACS/StepByStep/blob/main/docs/problems.md#invite-code-unknown`
+
+- **Statut** : 404
+- **Titre** : Code d'invitation inconnu
+- **Cause** : aucun groupe ne correspond à ce code, bien formé : il a été mal recopié, ou le groupe a été supprimé avec son dernier membre.
+- **Réaction attendue** : le client le signale à l'utilisateur ; aucune nouvelle tentative avec le même code.
+
+## group-full
+
+`https://github.com/GregoireChevalierACS/StepByStep/blob/main/docs/problems.md#group-full`
+
+- **Statut** : 409
+- **Titre** : Groupe complet
+- **Cause** : le groupe a atteint sa taille maximale (50 membres).
+- **Réaction attendue** : le client le signale à l'utilisateur ; une nouvelle tentative n'aboutira que si un membre part.

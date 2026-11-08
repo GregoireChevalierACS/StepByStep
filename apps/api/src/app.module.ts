@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { DevicesModule } from './devices/devices.module.js';
 import { EventsModule } from './events/events.module.js';
 import { GoalsModule } from './goals/goals.module.js';
+import { GroupsModule } from './groups/groups.module.js';
 import { HealthModule } from './health/health.module.js';
 import { ReadingsModule } from './readings/readings.module.js';
 import { StreakModule } from './streak/streak.module.js';
@@ -29,6 +30,7 @@ import { StreakModule } from './streak/streak.module.js';
     GoalsModule,
     StreakModule,
     AccountsModule,
+    GroupsModule,
     EventsModule,
   ],
 })

@@ -1,12 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { DailyGoal, LocalDate, ok, StepCounterReading, TimeZonePeriod } from '@stepbystep/domain';
 import { describe, expect, it } from 'vitest';
-import { InMemoryDailyStepsRepository } from '../testing/in-memory-daily-steps.repository.js';
-import { InMemoryDeviceRepository } from '../testing/in-memory-device.repository.js';
-import { InMemoryGoalRepository } from '../testing/in-memory-goal.repository.js';
-import { InMemoryOutbox } from '../testing/in-memory-outbox.js';
 import { InMemoryReadingsUnitOfWork } from '../testing/in-memory-readings-unit-of-work.js';
-import { InMemoryTimeZoneRepository } from '../testing/in-memory-time-zone.repository.js';
+import { inMemoryStores } from '../testing/in-memory-stores.js';
 import { unwrap } from '../testing/unwrap.js';
 import { RecordReadingsService } from './record-readings.service.js';
 import { ANY_SECRET_HASH } from '../testing/fixtures.js';
@@ -20,18 +16,9 @@ const PARIS = zone('Europe/Paris');
 // Cas d'usage testé sans base : l'unité de travail en mémoire tient le même contrat que
 // l'adapter PostgreSQL (transaction, verrou par appareil, doublons ignorés).
 const setup = async () => {
-  const devices = new InMemoryDeviceRepository();
-  const timeZones = new InMemoryTimeZoneRepository();
-  const dailySteps = new InMemoryDailyStepsRepository();
-  const goals = new InMemoryGoalRepository();
-  const outbox = new InMemoryOutbox();
-  const unitOfWork = new InMemoryReadingsUnitOfWork({
-    devices,
-    timeZones,
-    dailySteps,
-    goals,
-    outbox,
-  });
+  const stores = inMemoryStores();
+  const { devices, timeZones, dailySteps, goals, outbox } = stores;
+  const unitOfWork = new InMemoryReadingsUnitOfWork(stores);
   const { accountId, deviceId } = await devices.registerWithNewAccount(ANY_SECRET_HASH);
   const storedDays = async () =>
     (await dailySteps.upTo(deviceId, unwrap(LocalDate.create('2100-01-01')))).map(

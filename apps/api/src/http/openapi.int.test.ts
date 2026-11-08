@@ -48,9 +48,13 @@ describe('documentation OpenAPI', () => {
         .sort(),
     ).toEqual([
       'delete /v1/accounts/{accountId}',
+      'delete /v1/accounts/{accountId}/groups/{groupId}',
+      'get /v1/accounts/{accountId}/groups',
       'get /v1/devices/{deviceId}/daily-steps',
       'get /v1/devices/{deviceId}/streak',
       'get /v1/health',
+      'post /v1/accounts/{accountId}/groups',
+      'post /v1/accounts/{accountId}/groups/join',
       'post /v1/devices',
       'post /v1/devices/{deviceId}/readings',
       'post /v1/devices/{deviceId}/tokens',
@@ -82,8 +86,12 @@ describe('documentation OpenAPI', () => {
 
     expect(protectedRoutes).toEqual([
       'delete /v1/accounts/{accountId}',
+      'delete /v1/accounts/{accountId}/groups/{groupId}',
+      'get /v1/accounts/{accountId}/groups',
       'get /v1/devices/{deviceId}/daily-steps',
       'get /v1/devices/{deviceId}/streak',
+      'post /v1/accounts/{accountId}/groups',
+      'post /v1/accounts/{accountId}/groups/join',
       'post /v1/devices/{deviceId}/readings',
       'put /v1/accounts/{accountId}/goal',
       'put /v1/accounts/{accountId}/nickname',
