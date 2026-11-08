@@ -1,3 +1,4 @@
+import type { Nickname } from '@stepbystep/domain';
 import type { AccountRepository } from '../accounts/account.repository.js';
 import type { InMemoryStores } from './in-memory-stores.js';
 
@@ -6,10 +7,22 @@ import type { InMemoryStores } from './in-memory-stores.js';
  * les comptes connus sont ceux des appareils enregistrés, comme dans la vraie base.
  */
 export class InMemoryAccountRepository implements AccountRepository {
+  private readonly nicknames = new Map<string, Nickname>();
+
   constructor(private readonly stores: InMemoryStores) {}
 
   exists(accountId: string): Promise<boolean> {
     return Promise.resolve(this.stores.devices.hasAccount(accountId));
+  }
+
+  nicknameOf(accountId: string): Promise<Nickname | undefined> {
+    return Promise.resolve(this.nicknames.get(accountId));
+  }
+
+  setNickname(accountId: string, nickname: Nickname): Promise<void> {
+    // Comme l'UPDATE en base : sans effet sur un compte inconnu.
+    if (this.stores.devices.hasAccount(accountId)) this.nicknames.set(accountId, nickname);
+    return Promise.resolve();
   }
 
   /**
@@ -24,6 +37,7 @@ export class InMemoryAccountRepository implements AccountRepository {
       outbox.forgetDevice(deviceId);
     }
     goals.forgetAccount(accountId);
+    this.nicknames.delete(accountId);
     return Promise.resolve();
   }
 }

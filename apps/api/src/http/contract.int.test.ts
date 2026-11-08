@@ -8,6 +8,7 @@ import {
   dailyStepsResponse,
   deviceTokenResponse,
   goalHistoryResponse,
+  nicknameResponse,
   problemDetailsResponse,
   recordReadingsResponse,
   registeredDeviceResponse,
@@ -86,6 +87,16 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
         await http()
           .get(`/v1/devices/${device.deviceId}/streak`)
           .set('Authorization', authorization)
+          .expect(200)
+      ).body,
+    );
+
+    nicknameResponse.parse(
+      (
+        await http()
+          .put(`/v1/accounts/${device.accountId}/nickname`)
+          .set('Authorization', authorization)
+          .send({ nickname: 'Zoé' })
           .expect(200)
       ).body,
     );
