@@ -7,8 +7,6 @@ import type { InMemoryStores } from './in-memory-stores.js';
  * les comptes connus sont ceux des appareils enregistrés, comme dans la vraie base.
  */
 export class InMemoryAccountRepository implements AccountRepository {
-  private readonly nicknames = new Map<string, Nickname>();
-
   constructor(private readonly stores: InMemoryStores) {}
 
   exists(accountId: string): Promise<boolean> {
@@ -16,12 +14,12 @@ export class InMemoryAccountRepository implements AccountRepository {
   }
 
   nicknameOf(accountId: string): Promise<Nickname | undefined> {
-    return Promise.resolve(this.nicknames.get(accountId));
+    return Promise.resolve(this.stores.nicknames.get(accountId));
   }
 
   setNickname(accountId: string, nickname: Nickname): Promise<void> {
     // Comme l'UPDATE en base : sans effet sur un compte inconnu.
-    if (this.stores.devices.hasAccount(accountId)) this.nicknames.set(accountId, nickname);
+    if (this.stores.devices.hasAccount(accountId)) this.stores.nicknames.set(accountId, nickname);
     return Promise.resolve();
   }
 
@@ -30,14 +28,15 @@ export class InMemoryAccountRepository implements AccountRepository {
    * mémoire, deviennent inaccessibles : elle refuse tout appareil inconnu (DeviceNotFound).
    */
   delete(accountId: string): Promise<void> {
-    const { devices, timeZones, dailySteps, goals, outbox } = this.stores;
+    const { devices, nicknames, timeZones, dailySteps, goals, outbox, groups } = this.stores;
     for (const deviceId of devices.forgetAccount(accountId)) {
       timeZones.forgetDevice(deviceId);
       dailySteps.forgetDevice(deviceId);
       outbox.forgetDevice(deviceId);
     }
     goals.forgetAccount(accountId);
-    this.nicknames.delete(accountId);
+    groups.forgetAccount(accountId);
+    nicknames.delete(accountId);
     return Promise.resolve();
   }
 }

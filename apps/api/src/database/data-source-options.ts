@@ -4,6 +4,8 @@ import { DailyGoalEntity } from './entities/daily-goal.entity.js';
 import { DailyStepsEntity } from './entities/daily-steps.entity.js';
 import { DeviceTimeZoneEntity } from './entities/device-time-zone.entity.js';
 import { DeviceEntity } from './entities/device.entity.js';
+import { GroupMemberEntity } from './entities/group-member.entity.js';
+import { GroupEntity } from './entities/group.entity.js';
 import { OutboxEventEntity } from './entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from './entities/step-counter-reading.entity.js';
 import { InitialSchema1791743484726 } from './migrations/1791743484726-initial-schema.js';
@@ -12,6 +14,7 @@ import { OutboxPendingIndex1792520763543 } from './migrations/1792520763543-outb
 import { DeviceSecretHash1792522063512 } from './migrations/1792522063512-device-secret-hash.js';
 import { OutboxEventDevice1793972772855 } from './migrations/1793972772855-outbox-event-device.js';
 import { AccountNickname1794043623119 } from './migrations/1794043623119-account-nickname.js';
+import { Groups1794140180106 } from './migrations/1794140180106-groups.js';
 
 // Listes explicites (pas de motifs de fichiers) : vérifiées par TypeScript, insensibles
 // à la différence entre sources .ts et fichiers compilés .js.
@@ -23,6 +26,8 @@ export const ENTITIES = [
   DailyGoalEntity,
   DailyStepsEntity,
   OutboxEventEntity,
+  GroupEntity,
+  GroupMemberEntity,
 ];
 
 // Dans l'ordre d'application.
@@ -33,6 +38,7 @@ export const MIGRATIONS = [
   DeviceSecretHash1792522063512,
   OutboxEventDevice1793972772855,
   AccountNickname1794043623119,
+  Groups1794140180106,
 ];
 
 /**

@@ -3,6 +3,7 @@ import { accountRepositoryContract } from './contracts/account-repository.contra
 import { dailyStepsRepositoryContract } from './contracts/daily-steps-repository.contract.js';
 import { deviceRepositoryContract } from './contracts/device-repository.contract.js';
 import { goalRepositoryContract } from './contracts/goal-repository.contract.js';
+import { groupRepositoryContract } from './contracts/group-repository.contract.js';
 import { outboxContract } from './contracts/outbox.contract.js';
 import { readingsUnitOfWorkContract } from './contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from './contracts/time-zone-repository.contract.js';
@@ -44,6 +45,17 @@ describe('adapters en mémoire', () => {
         unitOfWork: new InMemoryReadingsUnitOfWork(stores),
         storedEvents: (deviceId) =>
           Promise.resolve(stores.outbox.all().filter(({ key }) => key.includes(deviceId))),
+      };
+    });
+  });
+
+  describe('InMemoryGroupRepository', () => {
+    groupRepositoryContract(() => {
+      const stores = inMemoryStores(devices);
+      return {
+        repository: stores.groups,
+        accounts: new InMemoryAccountRepository(stores),
+        givenAccount,
       };
     });
   });

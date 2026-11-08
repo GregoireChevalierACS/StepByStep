@@ -8,6 +8,8 @@ import {
   dailyStepsResponse,
   deviceTokenResponse,
   goalHistoryResponse,
+  groupResponse,
+  groupsResponse,
   nicknameResponse,
   problemDetailsResponse,
   recordReadingsResponse,
@@ -97,6 +99,33 @@ describe('contrat de l’API : les réponses réelles respectent les schémas pu
           .put(`/v1/accounts/${device.accountId}/nickname`)
           .set('Authorization', authorization)
           .send({ nickname: 'Zoé' })
+          .expect(200)
+      ).body,
+    );
+
+    const group = groupResponse.parse(
+      (
+        await http()
+          .post(`/v1/accounts/${device.accountId}/groups`)
+          .set('Authorization', authorization)
+          .send({ name: 'Bureau' })
+          .expect(201)
+      ).body,
+    );
+    groupsResponse.parse(
+      (
+        await http()
+          .get(`/v1/accounts/${device.accountId}/groups`)
+          .set('Authorization', authorization)
+          .expect(200)
+      ).body,
+    );
+    groupResponse.parse(
+      (
+        await http()
+          .post(`/v1/accounts/${device.accountId}/groups/join`)
+          .set('Authorization', authorization)
+          .send({ inviteCode: group.inviteCode })
           .expect(200)
       ).body,
     );

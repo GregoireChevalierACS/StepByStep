@@ -34,6 +34,16 @@ export const dailyStepsResponse = z.array(dayTotalResponse);
 
 export const nicknameResponse = z.strictObject({ nickname: z.string() });
 
+export const groupResponse = z.strictObject({
+  groupId: uuidSchema,
+  name: z.string(),
+  inviteCode: z.string(),
+  // Pseudos des membres, dans l'ordre d'arrivée ; `you` marque le compte qui demande.
+  members: z.array(z.strictObject({ nickname: z.string(), you: z.boolean() })),
+});
+
+export const groupsResponse = z.array(groupResponse);
+
 export const goalHistoryResponse = z.array(
   z.strictObject({ effectiveFrom: localDateSchema, goal: z.number().int().positive() }),
 );
