@@ -212,6 +212,7 @@ Il s'agit de détecter les pas à partir de l'accéléromètre brut, en TS pur :
 - Flows Maestro sur le S22 (via ADB Wi-Fi) avant chaque release.
 - EAS Build : APK téléchargeable par lien ou QR code, puis éventuellement le Play Store (canal de test interne).
 - ADR dans `docs/adr/` pour tracer les choix d'architecture.
+- Observabilité de l'API : ✅ journaux JSON avec identifiant de requête et journal d'accès (ADR 0002, décision 21) ; métriques Prometheus à venir.
 
 ### Phase 8 (optionnel) : serveur de synchronisation NestJS + PostgreSQL
 

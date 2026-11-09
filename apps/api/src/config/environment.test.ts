@@ -17,6 +17,7 @@ describe('parseEnvironment', () => {
   it('applique les valeurs par défaut quand seules les variables obligatoires sont fournies', () => {
     expect(parseEnvironment({ DATABASE_URL, JWT_SECRET })).toEqual({
       NODE_ENV: 'development',
+      LOG_FORMAT: 'json',
       PORT: 3000,
       DATABASE_URL,
       JWT_SECRET,
