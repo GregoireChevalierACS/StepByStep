@@ -9,6 +9,7 @@ import { groupRepositoryContract } from '../../testing/contracts/group-repositor
 import { rankingQueryContract } from '../../testing/contracts/ranking-query.contract.js';
 import { readingsUnitOfWorkContract } from '../../testing/contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from '../../testing/contracts/time-zone-repository.contract.js';
+import { weeklyResultsContract } from '../../testing/contracts/weekly-results.contract.js';
 import type { OutboxEvent } from '../../events/outbox-event.js';
 import { dataSourceOptions } from '../data-source-options.js';
 import { DailyStepsEntity } from '../entities/daily-steps.entity.js';
@@ -25,6 +26,7 @@ import { TypeOrmGroupRepository } from './typeorm-group.repository.js';
 import { TypeOrmRankingQuery } from './typeorm-ranking.query.js';
 import { TypeOrmReadingsUnitOfWork } from './typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './typeorm-time-zone.repository.js';
+import { TypeOrmWeeklyResultsRepository } from './typeorm-weekly-results.repository.js';
 import { ANY_SECRET_HASH } from '../../testing/fixtures.js';
 
 // Les adapters PostgreSQL passent les mêmes contrats que les fakes en mémoire. Chaque test
@@ -95,6 +97,15 @@ describe('adapters PostgreSQL (TypeORM)', () => {
           .getRepository(DailyStepsEntity)
           .insert(days.map(([day, steps]) => ({ deviceId, day, steps })));
       },
+    }));
+  });
+
+  describe('TypeOrmWeeklyResultsRepository', () => {
+    weeklyResultsContract(() => ({
+      repository: new TypeOrmWeeklyResultsRepository(dataSource),
+      groups: new TypeOrmGroupRepository(dataSource),
+      accounts: new TypeOrmAccountRepository(dataSource),
+      givenAccount,
     }));
   });
 

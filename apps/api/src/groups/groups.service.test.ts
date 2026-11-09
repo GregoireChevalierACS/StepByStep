@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Nickname } from '@stepbystep/domain';
+import { IsoWeek, Nickname } from '@stepbystep/domain';
 import { describe, expect, it } from 'vitest';
 import { ANY_SECRET_HASH } from '../testing/fixtures.js';
 import { InMemoryAccountRepository } from '../testing/in-memory-account.repository.js';
@@ -12,7 +12,8 @@ import { GroupsService, MAX_GROUP_MEMBERS } from './groups.service.js';
 const setup = () => {
   const stores = inMemoryStores();
   const accounts = new InMemoryAccountRepository(stores);
-  const service = new GroupsService(accounts, stores.groups, new InMemoryRankingQuery(stores));
+  const rankings = new InMemoryRankingQuery(stores);
+  const service = new GroupsService(accounts, stores.groups, rankings, stores.weeklyResults);
   const account = async (nickname?: string) => {
     const { accountId } = await stores.devices.registerWithNewAccount(ANY_SECRET_HASH);
     if (nickname !== undefined) {
@@ -20,7 +21,7 @@ const setup = () => {
     }
     return accountId;
   };
-  return { service, account, stores };
+  return { service, account, stores, rankings };
 };
 
 describe('GroupsService', () => {
@@ -98,10 +99,27 @@ describe('GroupsService', () => {
         week: '2026-W45',
         from: '2026-11-02',
         to: '2026-11-08',
+        closed: false,
         ranking: [
           { rank: 1, nickname: 'Paul', steps: 12_000, you: false },
           { rank: 2, nickname: 'Zoé', steps: 0, you: true },
         ],
+      });
+    });
+
+    it('sert le classement figé d’une semaine close, que les pas tardifs ne changent plus', async () => {
+      const { service, account, stores, rankings } = setup();
+      const zoe = await account('Zoé');
+      const { groupId } = unwrap(await service.create(zoe, 'Bureau'));
+      const [phone] = stores.devices.devicesOf(zoe);
+      stores.dailySteps.given(phone ?? '', dailyStepsOf([['2026-11-03', 5_000]]));
+      const week = unwrap(IsoWeek.create('2026-W45'));
+      await stores.weeklyResults.closeWeek(week, (ids) => rankings.weeklyRankings(ids, week));
+      stores.dailySteps.given(phone ?? '', dailyStepsOf([['2026-11-04', 9_000]]));
+
+      expect(unwrap(await service.ranking(zoe, groupId, '2026-W45'))).toMatchObject({
+        closed: true,
+        ranking: [{ rank: 1, nickname: 'Zoé', steps: 5_000, you: true }],
       });
     });
 

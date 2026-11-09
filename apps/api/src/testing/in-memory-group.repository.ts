@@ -62,6 +62,11 @@ export class InMemoryGroupRepository implements GroupRepository {
     );
   }
 
+  /** Identifiants des groupes existants. */
+  ids(): string[] {
+    return [...this.groups.keys()];
+  }
+
   /** Membres d'un groupe, dans l'ordre d'arrivée ; `undefined` pour un groupe inconnu. */
   membersOf(groupId: string): readonly string[] | undefined {
     return this.groups.get(groupId)?.members;

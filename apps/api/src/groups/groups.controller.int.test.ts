@@ -5,7 +5,10 @@ import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { FORBIDDEN_PROBLEM_TYPE } from '../auth/auth-errors.js';
+import { closableWeek, LocalDate } from '@stepbystep/domain';
 import { configureApp } from '../configure-app.js';
+import { unwrap } from '../testing/unwrap.js';
+import { ChallengeCloser } from './challenge-closer.js';
 import {
   type AuthenticatedDevice,
   registerAuthenticatedDevice,
@@ -152,11 +155,48 @@ describe('groupes : /v1/accounts/:accountId/groups', () => {
       week: '2026-W45',
       from: '2026-11-02',
       to: '2026-11-08',
+      closed: false,
       ranking: [
         { rank: 1, nickname: 'Paul', steps: 9000, you: false },
         { rank: 2, nickname: 'Zoé', steps: 4000, you: true },
       ],
     });
+  });
+
+  it('fige le classement à la clôture : les pas arrivés ensuite ne le changent plus', async () => {
+    const zoe = await member('Zoé');
+    const { groupId } = await created(zoe, 'Bureau');
+    const database = app.get(DataSource);
+    const closer = app.get(ChallengeCloser);
+    // La semaine close dépend de la date du jour : celle que la règle du domaine désigne. Une
+    // autre clôture peut tourner (autres tests) : on réessaie, comme le ferait le job.
+    const closing = async () => {
+      for (;;) {
+        const result = await closer.closeDueWeek();
+        if (result.closed !== undefined) return result.week;
+      }
+    };
+    const today = unwrap(LocalDate.create(new Date().toISOString().slice(0, 10)));
+    const week = closableWeek(today);
+    await database.query('INSERT INTO daily_steps (device_id, day, steps) VALUES ($1, $2, 5000)', [
+      zoe.deviceId,
+      week.start.toString(),
+    ]);
+    const ranking = async () =>
+      (
+        await http()
+          .get(`${groupsOf(zoe)}/${groupId}/ranking?week=${week.toString()}`)
+          .set('Authorization', zoe.authorization)
+          .expect(200)
+      ).body as { closed: boolean; ranking: { steps: number }[] };
+    expect(await ranking()).toMatchObject({ closed: false, ranking: [{ steps: 5000 }] });
+
+    await closing();
+    await database.query('UPDATE daily_steps SET steps = 9000 WHERE device_id = $1', [
+      zoe.deviceId,
+    ]);
+
+    expect(await ranking()).toMatchObject({ closed: true, ranking: [{ steps: 5000 }] });
   });
 
   describe('erreurs', () => {

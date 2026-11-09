@@ -28,7 +28,8 @@ export class InMemoryAccountRepository implements AccountRepository {
    * mémoire, deviennent inaccessibles : elle refuse tout appareil inconnu (DeviceNotFound).
    */
   delete(accountId: string): Promise<void> {
-    const { devices, nicknames, timeZones, dailySteps, goals, outbox, groups } = this.stores;
+    const { devices, nicknames, timeZones, dailySteps, goals, outbox, groups, weeklyResults } =
+      this.stores;
     for (const deviceId of devices.forgetAccount(accountId)) {
       timeZones.forgetDevice(deviceId);
       dailySteps.forgetDevice(deviceId);
@@ -36,6 +37,7 @@ export class InMemoryAccountRepository implements AccountRepository {
     }
     goals.forgetAccount(accountId);
     groups.forgetAccount(accountId);
+    weeklyResults.forgetAccount(accountId);
     nicknames.delete(accountId);
     return Promise.resolve();
   }

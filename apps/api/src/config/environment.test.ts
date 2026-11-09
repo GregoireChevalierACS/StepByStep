@@ -21,6 +21,7 @@ describe('parseEnvironment', () => {
       DATABASE_URL,
       JWT_SECRET,
       OUTBOX_RELAY_INTERVAL_MS: 5000,
+      CHALLENGE_CLOSING_INTERVAL_MS: 3_600_000,
     });
   });
 

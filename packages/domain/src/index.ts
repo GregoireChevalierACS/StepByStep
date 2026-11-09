@@ -45,6 +45,7 @@ export { bestDayOfAtLeast, streakOfAtLeast } from './services/badgeRules';
 export type { ActivityHistory } from './services/badgeRules';
 export { BADGES, unlockedBadges } from './services/badges';
 export type { Badge } from './services/badges';
+export { CLOSING_DELAY_DAYS, closableWeek } from './services/closableWeek';
 export { computeStreak } from './services/computeStreak';
 export { dailyStepsFromReadings } from './services/dailyStepsFromReadings';
 export { distributeStepsByDay } from './services/distributeStepsByDay';

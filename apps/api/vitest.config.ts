@@ -12,6 +12,8 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       OUTBOX_RELAY_INTERVAL_MS: '0',
+      // Clôture des défis désactivée pour la même raison : les tests la lancent eux-mêmes.
+      CHALLENGE_CLOSING_INTERVAL_MS: '0',
       JWT_SECRET: 'cle-de-signature-reservee-aux-tests-de-l-api',
     },
     coverage: {

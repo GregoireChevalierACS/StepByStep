@@ -9,6 +9,7 @@ import { OUTBOX } from '../events/outbox.js';
 import { GOAL_REPOSITORY } from '../goals/goal.repository.js';
 import { GROUP_REPOSITORY } from '../groups/group.repository.js';
 import { RANKING_QUERY } from '../groups/ranking.query.js';
+import { WEEKLY_RESULTS_REPOSITORY } from '../groups/weekly-results.repository.js';
 import { READINGS_UNIT_OF_WORK } from '../readings/readings-unit-of-work.js';
 import { TIME_ZONE_REPOSITORY } from '../time/time-zone.repository.js';
 import { dataSourceOptions } from './data-source-options.js';
@@ -18,6 +19,7 @@ import { TypeOrmDeviceRepository } from './repositories/typeorm-device.repositor
 import { TypeOrmGoalRepository } from './repositories/typeorm-goal.repository.js';
 import { TypeOrmGroupRepository } from './repositories/typeorm-group.repository.js';
 import { TypeOrmRankingQuery } from './repositories/typeorm-ranking.query.js';
+import { TypeOrmWeeklyResultsRepository } from './repositories/typeorm-weekly-results.repository.js';
 import { TypeOrmOutbox } from './repositories/typeorm-outbox.js';
 import { TypeOrmReadingsUnitOfWork } from './repositories/typeorm-readings-unit-of-work.js';
 import { TypeOrmTimeZoneRepository } from './repositories/typeorm-time-zone.repository.js';
@@ -31,6 +33,7 @@ const repositories = [
   { provide: GOAL_REPOSITORY, useClass: TypeOrmGoalRepository },
   { provide: GROUP_REPOSITORY, useClass: TypeOrmGroupRepository },
   { provide: RANKING_QUERY, useClass: TypeOrmRankingQuery },
+  { provide: WEEKLY_RESULTS_REPOSITORY, useClass: TypeOrmWeeklyResultsRepository },
   { provide: TIME_ZONE_REPOSITORY, useClass: TypeOrmTimeZoneRepository },
   { provide: READINGS_UNIT_OF_WORK, useClass: TypeOrmReadingsUnitOfWork },
   { provide: OUTBOX, useClass: TypeOrmOutbox },
