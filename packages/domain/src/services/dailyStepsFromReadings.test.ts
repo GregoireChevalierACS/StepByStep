@@ -81,6 +81,28 @@ describe('dailyStepsFromReadings', () => {
     ).toEqual([{ date: '2026-10-09', steps: 500 }]);
   });
 
+  it.each([
+    ['ancien démarrage reçu d’abord', [7, 8]],
+    ['nouveau démarrage reçu d’abord', [8, 7]],
+  ])(
+    'place l’ancien démarrage avant le nouveau quand deux relevés ont le même instant (%s)',
+    (_case, order) => {
+      // À 18:00, le dernier relevé du démarrage 7 et le premier du démarrage 8 portent le même
+      // instant. Dans l'ordre des démarrages : 5 000 + 300 (après redémarrage) + 700 = 6 000.
+      // Dans l'ordre inverse, la paire 8 → 7 compterait 5 000 de plus et 7 → 8 ses 1 000 pas.
+      const atSix = (boot: number) =>
+        boot === 7 ? reading('2026-10-09T18:00', 5000, 7) : reading('2026-10-09T18:00', 300, 8);
+
+      expect(
+        daily([
+          reading('2026-10-09T08:00', 0, 7),
+          ...order.map(atSix),
+          reading('2026-10-09T19:00', 1000, 8),
+        ]),
+      ).toEqual([{ date: '2026-10-09', steps: 6000 }]);
+    },
+  );
+
   it('recalcule les jours voisins quand un relevé arrive en retard', () => {
     const before = [reading('2026-10-09T23:00', 1000), reading('2026-10-10T01:00', 3000)];
     const late = reading('2026-10-09T23:50', 2900);
