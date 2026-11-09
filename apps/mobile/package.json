@@ -22,11 +22,11 @@
     "react-native": "0.88.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^7.29.13",
     "@types/react": "~19.3.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^4.1.12",
     "typescript": "~6.0.3",
-    "vite": "^8.3.4",
-    "vitest": "^4.1.11"
+    "vite": "^8.3.6",
+    "vitest": "^4.1.12"
   }
 }
