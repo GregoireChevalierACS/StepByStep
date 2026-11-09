@@ -8,6 +8,7 @@ import { GroupMemberEntity } from './entities/group-member.entity.js';
 import { GroupEntity } from './entities/group.entity.js';
 import { OutboxEventEntity } from './entities/outbox-event.entity.js';
 import { StepCounterReadingEntity } from './entities/step-counter-reading.entity.js';
+import { WeeklyResultEntity } from './entities/weekly-result.entity.js';
 import { InitialSchema1791743484726 } from './migrations/1791743484726-initial-schema.js';
 import { OutboxEvents1792520157801 } from './migrations/1792520157801-outbox-events.js';
 import { OutboxPendingIndex1792520763543 } from './migrations/1792520763543-outbox-pending-index.js';
@@ -15,6 +16,7 @@ import { DeviceSecretHash1792522063512 } from './migrations/1792522063512-device
 import { OutboxEventDevice1793972772855 } from './migrations/1793972772855-outbox-event-device.js';
 import { AccountNickname1794043623119 } from './migrations/1794043623119-account-nickname.js';
 import { Groups1794140180106 } from './migrations/1794140180106-groups.js';
+import { WeeklyResults1794164134482 } from './migrations/1794164134482-weekly-results.js';
 
 // Listes explicites (pas de motifs de fichiers) : vérifiées par TypeScript, insensibles
 // à la différence entre sources .ts et fichiers compilés .js.
@@ -28,6 +30,7 @@ export const ENTITIES = [
   OutboxEventEntity,
   GroupEntity,
   GroupMemberEntity,
+  WeeklyResultEntity,
 ];
 
 // Dans l'ordre d'application.
@@ -39,6 +42,7 @@ export const MIGRATIONS = [
   OutboxEventDevice1793972772855,
   AccountNickname1794043623119,
   Groups1794140180106,
+  WeeklyResults1794164134482,
 ];
 
 /**

@@ -77,3 +77,40 @@ describe('IsoWeek', () => {
     );
   });
 });
+
+describe('IsoWeek.containing et previous', () => {
+  it.each([
+    ['2026-11-02', '2026-W45'],
+    ['2026-11-08', '2026-W45'],
+    // Fin décembre ou début janvier : la semaine est celle de l'année de son jeudi.
+    ['2025-12-29', '2026-W01'],
+    ['2027-01-01', '2026-W53'],
+    ['2027-01-03', '2026-W53'],
+    ['2024-12-30', '2025-W01'],
+  ])('%s est dans la semaine %s', (day, expected) => {
+    expect(IsoWeek.containing(date(day)).toString()).toBe(expected);
+  });
+
+  it.each([
+    ['2026-W45', '2026-W44'],
+    ['2026-W01', '2025-W52'],
+    ['2027-W01', '2026-W53'],
+  ])('la semaine avant %s est %s', (value, expected) => {
+    expect(unwrap(IsoWeek.create(value)).previous().toString()).toBe(expected);
+  });
+
+  it('contient toujours le jour dont elle est la semaine, et commence par son lundi', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 200_000 }), (days) => {
+        const day = date('1971-01-01').plusDays(days);
+        const week = IsoWeek.containing(day);
+
+        expect(week.contains(day)).toBe(true);
+        expect(IsoWeek.containing(week.start).toString()).toBe(week.toString());
+        expect(unwrap(IsoWeek.create(week.toString())).start.toString()).toBe(
+          week.start.toString(),
+        );
+      }),
+    );
+  });
+});

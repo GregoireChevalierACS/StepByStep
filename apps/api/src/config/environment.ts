@@ -15,6 +15,8 @@ const environmentSchema = z.object({
   JWT_SECRET: z.string().min(32, { message: '32 caractères au moins' }),
   // Intervalle du relais de l'outbox (publication des événements) ; 0 le désactive (tests).
   OUTBOX_RELAY_INTERVAL_MS: z.coerce.number().int().min(0).default(5000),
+  // Intervalle de la clôture des défis hebdomadaires (défaut : une heure) ; 0 la désactive.
+  CHALLENGE_CLOSING_INTERVAL_MS: z.coerce.number().int().min(0).default(3_600_000),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

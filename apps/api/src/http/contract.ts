@@ -49,6 +49,7 @@ export const rankingResponse = z.strictObject({
   week: z.string(),
   from: localDateSchema,
   to: localDateSchema,
+  closed: z.boolean(),
   ranking: z.array(
     z.strictObject({
       rank: z.number().int().positive(),

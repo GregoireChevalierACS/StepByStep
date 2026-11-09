@@ -8,6 +8,7 @@ import { outboxContract } from './contracts/outbox.contract.js';
 import { dailyStepsOf, rankingQueryContract } from './contracts/ranking-query.contract.js';
 import { readingsUnitOfWorkContract } from './contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from './contracts/time-zone-repository.contract.js';
+import { weeklyResultsContract } from './contracts/weekly-results.contract.js';
 import { InMemoryAccountRepository } from './in-memory-account.repository.js';
 import { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository.js';
 import { InMemoryDeviceRepository } from './in-memory-device.repository.js';
@@ -75,6 +76,18 @@ describe('adapters en mémoire', () => {
           stores.dailySteps.given(deviceId, dailyStepsOf(days));
           return Promise.resolve();
         },
+      };
+    });
+  });
+
+  describe('InMemoryWeeklyResultsRepository', () => {
+    weeklyResultsContract(() => {
+      const stores = inMemoryStores(devices);
+      return {
+        repository: stores.weeklyResults,
+        groups: stores.groups,
+        accounts: new InMemoryAccountRepository(stores),
+        givenAccount,
       };
     });
   });

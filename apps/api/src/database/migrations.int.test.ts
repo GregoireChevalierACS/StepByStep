@@ -14,6 +14,7 @@ const TABLES = [
   'groups',
   'outbox_events',
   'step_counter_readings',
+  'weekly_results',
 ];
 
 describe('migrations', () => {

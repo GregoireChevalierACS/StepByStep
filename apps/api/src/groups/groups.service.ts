@@ -19,7 +19,11 @@ import {
   type InviteCodeUnknown,
 } from './group.repository.js';
 import { newInviteCode } from './invite-code.js';
-import { RANKING_QUERY, type RankingQuery } from './ranking.query.js';
+import { RANKING_QUERY, type RankedMember, type RankingQuery } from './ranking.query.js';
+import {
+  WEEKLY_RESULTS_REPOSITORY,
+  type WeeklyResultsRepository,
+} from './weekly-results.repository.js';
 
 /** Taille maximale d'un groupe : un défi entre amis, pas un classement public. */
 export const MAX_GROUP_MEMBERS = 50;
@@ -38,6 +42,8 @@ export interface RankingView {
   readonly week: string;
   readonly from: string;
   readonly to: string;
+  /** Semaine close : classement figé, qui ne bougera plus. Sinon : classement en direct. */
+  readonly closed: boolean;
   readonly ranking: readonly {
     readonly rank: number;
     readonly nickname: string;
@@ -61,6 +67,7 @@ export class GroupsService {
     @Inject(ACCOUNT_REPOSITORY) private readonly accounts: AccountRepository,
     @Inject(GROUP_REPOSITORY) private readonly groups: GroupRepository,
     @Inject(RANKING_QUERY) private readonly rankings: RankingQuery,
+    @Inject(WEEKLY_RESULTS_REPOSITORY) private readonly results: WeeklyResultsRepository,
   ) {}
 
   async create(
@@ -107,12 +114,15 @@ export class GroupsService {
     if (!isoWeek.ok) return isoWeek;
     const isMember = (await this.groups.groupsOf(accountId)).some(({ id }) => id === groupId);
     if (!isMember) return err({ kind: 'GroupNotFound', groupId });
-    const ranking = (await this.rankings.weeklyRankings([groupId], isoWeek.value)).get(groupId);
+    const frozen = await this.results.resultsOf(groupId, isoWeek.value);
+    const ranking: readonly RankedMember[] | undefined =
+      frozen ?? (await this.rankings.weeklyRankings([groupId], isoWeek.value)).get(groupId);
     return ok({
       groupId,
       week: isoWeek.value.toString(),
       from: isoWeek.value.start.toString(),
       to: isoWeek.value.end.toString(),
+      closed: frozen !== undefined,
       ranking: (ranking ?? []).map((member) => ({
         rank: member.rank,
         nickname: member.nickname.value,

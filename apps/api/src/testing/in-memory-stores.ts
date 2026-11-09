@@ -5,6 +5,7 @@ import { InMemoryGoalRepository } from './in-memory-goal.repository.js';
 import { InMemoryGroupRepository } from './in-memory-group.repository.js';
 import { InMemoryOutbox } from './in-memory-outbox.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
+import { InMemoryWeeklyResultsRepository } from './in-memory-weekly-results.repository.js';
 
 /** Données partagées entre les fakes, comme les tables d'une base commune. */
 export interface InMemoryStores {
@@ -16,6 +17,7 @@ export interface InMemoryStores {
   readonly goals: InMemoryGoalRepository;
   readonly outbox: InMemoryOutbox;
   readonly groups: InMemoryGroupRepository;
+  readonly weeklyResults: InMemoryWeeklyResultsRepository;
 }
 
 /** Une « base » en mémoire vide ; `devices` permet de partager un registre déjà créé. */
@@ -23,6 +25,7 @@ export const inMemoryStores = (
   devices: InMemoryDeviceRepository = new InMemoryDeviceRepository(),
 ): InMemoryStores => {
   const nicknames = new Map<string, Nickname>();
+  const groups = new InMemoryGroupRepository(nicknames);
   return {
     devices,
     nicknames,
@@ -30,6 +33,7 @@ export const inMemoryStores = (
     dailySteps: new InMemoryDailyStepsRepository(),
     goals: new InMemoryGoalRepository(),
     outbox: new InMemoryOutbox(),
-    groups: new InMemoryGroupRepository(nicknames),
+    groups,
+    weeklyResults: new InMemoryWeeklyResultsRepository(groups),
   };
 };
