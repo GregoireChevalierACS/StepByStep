@@ -5,6 +5,8 @@ const POSTGRES_URL = /^postgres(ql)?:\/\//;
 /** Variables d'environnement de l'API : leur forme, leurs valeurs par défaut. */
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // JSON par défaut : un déploiement qui oublie la variable produit des journaux exploitables.
+  LOG_FORMAT: z.enum(['json', 'text']).default('json'),
   // L'environnement ne contient que du texte : on convertit, puis on valide.
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   DATABASE_URL: z.string().refine((url) => POSTGRES_URL.test(url) && URL.canParse(url), {
