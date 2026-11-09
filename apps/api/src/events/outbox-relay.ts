@@ -5,6 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
+import { Metrics } from '../observability/metrics.js';
 import { EVENT_PUBLISHER, type EventPublisher } from './event-publisher.js';
 import { OUTBOX, type Outbox } from './outbox.js';
 
@@ -33,6 +34,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     @Inject(OUTBOX) private readonly outbox: Outbox,
     @Inject(EVENT_PUBLISHER) private readonly publisher: EventPublisher,
     @Inject(OUTBOX_RELAY_OPTIONS) private readonly options: OutboxRelayOptions,
+    private readonly metrics: Metrics,
   ) {}
 
   /** Publie tous les événements en attente, par lots ; renvoie le nombre publié. */
@@ -62,8 +64,9 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
-      await this.drain();
+      this.metrics.relayPassSucceeded(await this.drain());
     } catch (error) {
+      this.metrics.relayPassFailed();
       this.logger.error(
         `Publication des événements interrompue, nouvel essai au prochain passage : ${
           error instanceof Error ? error.message : String(error)

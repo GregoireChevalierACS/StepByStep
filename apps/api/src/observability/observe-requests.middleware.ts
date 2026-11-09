@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
+import type { Metrics } from './metrics.js';
 import { runInRequestContext } from './request-context.js';
 
 export const REQUEST_ID_HEADER = 'X-Request-Id';
@@ -24,37 +25,39 @@ interface HttpResponse {
 
 const logger = new Logger('HTTP');
 
+// Appelées toutes les quelques secondes (sonde de santé, Prometheus) : en debug seulement.
+const QUIET_ROUTES = new Set(['/v1/health', '/metrics']);
+
 /**
  * Donne un identifiant à chaque requête : celui du client ou d'un proxy s'il est bien formé
  * (pour suivre une requête d'un service à l'autre), un nouveau sinon. Renvoyé dans l'en-tête
  * X-Request-Id de la réponse : un utilisateur qui signale une erreur peut le citer. Toute ligne
  * journalisée pendant la requête le porte. À la fin, une ligne d'accès : méthode, modèle de
- * route (jamais l'URL réelle, qui contient des identifiants et des paramètres), statut, durée.
+ * route (jamais l'URL réelle, qui contient des identifiants et des paramètres), statut, durée ;
+ * la même mesure alimente l'histogramme de latence des métriques.
  */
-export const requestIdMiddleware = (
-  request: HttpRequest,
-  response: HttpResponse,
-  next: () => void,
-): void => {
-  const received = request.headers['x-request-id'];
-  const requestId =
-    typeof received === 'string' && VALID_REQUEST_ID.test(received) ? received : randomUUID();
-  response.setHeader(REQUEST_ID_HEADER, requestId);
-  const startedAt = process.hrtime.bigint();
+export const observeRequests =
+  (metrics: Pick<Metrics, 'requestHandled'>) =>
+  (request: HttpRequest, response: HttpResponse, next: () => void): void => {
+    const received = request.headers['x-request-id'];
+    const requestId =
+      typeof received === 'string' && VALID_REQUEST_ID.test(received) ? received : randomUUID();
+    response.setHeader(REQUEST_ID_HEADER, requestId);
+    const startedAt = process.hrtime.bigint();
 
-  runInRequestContext({ requestId }, () => {
-    response.once('finish', () => {
-      const route = typeof request.route?.path === 'string' ? request.route.path : null;
-      const access = {
-        method: request.method,
-        route,
-        status: response.statusCode,
-        durationMs: Number((process.hrtime.bigint() - startedAt) / 1000n) / 1000,
-      };
-      // La sonde de santé est appelée toutes les quelques secondes : en debug seulement.
-      if (route === '/v1/health') logger.debug('Requête traitée', access);
-      else logger.log('Requête traitée', access);
+    runInRequestContext({ requestId }, () => {
+      response.once('finish', () => {
+        const route = typeof request.route?.path === 'string' ? request.route.path : null;
+        const access = {
+          method: request.method,
+          route,
+          status: response.statusCode,
+          durationMs: Number((process.hrtime.bigint() - startedAt) / 1000n) / 1000,
+        };
+        metrics.requestHandled(access);
+        if (route !== null && QUIET_ROUTES.has(route)) logger.debug('Requête traitée', access);
+        else logger.log('Requête traitée', access);
+      });
+      next();
     });
-    next();
-  });
-};
+  };

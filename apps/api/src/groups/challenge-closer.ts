@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { type Clock, closableWeek, type IsoWeek, LocalDate } from '@stepbystep/domain';
 import { CLOCK } from '../clock/clock.js';
+import { Metrics } from '../observability/metrics.js';
 import { RANKING_QUERY, type RankingQuery } from './ranking.query.js';
 import {
   WEEKLY_RESULTS_REPOSITORY,
@@ -38,6 +39,7 @@ export class ChallengeCloser implements OnApplicationBootstrap, OnModuleDestroy 
     @Inject(RANKING_QUERY) private readonly rankings: RankingQuery,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(CHALLENGE_CLOSER_OPTIONS) private readonly options: ChallengeCloserOptions,
+    private readonly metrics: Metrics,
   ) {}
 
   /**
@@ -71,10 +73,12 @@ export class ChallengeCloser implements OnApplicationBootstrap, OnModuleDestroy 
     this.running = true;
     try {
       const { week, closed } = await this.closeDueWeek();
+      this.metrics.closingPassSucceeded(closed);
       if (closed !== undefined && closed > 0) {
         this.logger.log(`Semaine ${week.toString()} close pour ${String(closed)} groupe(s).`);
       }
     } catch (error) {
+      this.metrics.closingPassFailed();
       this.logger.error(
         `Clôture des défis interrompue, nouvel essai au prochain passage : ${
           error instanceof Error ? error.message : String(error)

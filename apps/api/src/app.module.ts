@@ -11,6 +11,7 @@ import { EventsModule } from './events/events.module.js';
 import { GoalsModule } from './goals/goals.module.js';
 import { GroupsModule } from './groups/groups.module.js';
 import { HealthModule } from './health/health.module.js';
+import { MetricsModule } from './observability/metrics.module.js';
 import { ReadingsModule } from './readings/readings.module.js';
 import { StreakModule } from './streak/streak.module.js';
 
@@ -21,6 +22,7 @@ import { StreakModule } from './streak/streak.module.js';
     // arrête l'application avec un message explicite (« fail fast »).
     ConfigModule.forRoot({ isGlobal: true, validate: parseEnvironment }),
     ClockModule,
+    MetricsModule,
     AuthModule,
     DatabaseModule,
     HealthModule,

@@ -84,6 +84,18 @@ describe('parseEnvironment', () => {
     );
   });
 
+  it('rend le jeton des métriques facultatif, mais long quand il est fourni', () => {
+    const METRICS_TOKEN = 'jeton-de-supervision-de-32-caracteres';
+
+    expect(parseEnvironment({ DATABASE_URL, JWT_SECRET }).METRICS_TOKEN).toBeUndefined();
+    expect(parseEnvironment({ DATABASE_URL, JWT_SECRET, METRICS_TOKEN }).METRICS_TOKEN).toBe(
+      METRICS_TOKEN,
+    );
+    expect(() => parseEnvironment({ DATABASE_URL, JWT_SECRET, METRICS_TOKEN: 'court' })).toThrow(
+      /METRICS_TOKEN/,
+    );
+  });
+
   it('n’affiche jamais la valeur des variables dans le message d’erreur (secrets)', () => {
     const leaky = 'mysql://user:s3cr3t-password@localhost/db';
 

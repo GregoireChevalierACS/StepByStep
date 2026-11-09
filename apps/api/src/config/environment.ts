@@ -15,6 +15,9 @@ const environmentSchema = z.object({
   // Clé de signature des jetons d'appareil (HMAC) : obligatoire, longue, propre à chaque
   // environnement. Une clé courte se casse par force brute hors ligne à partir d'un seul jeton.
   JWT_SECRET: z.string().min(32, { message: '32 caractères au moins' }),
+  // Jeton que Prometheus présente pour lire /metrics ; sans lui, l'endpoint n'existe pas.
+  // Long, comme la clé des jetons : il protège l'état interne de l'API.
+  METRICS_TOKEN: z.string().min(32, { message: '32 caractères au moins' }).optional(),
   // Intervalle du relais de l'outbox (publication des événements) ; 0 le désactive (tests).
   OUTBOX_RELAY_INTERVAL_MS: z.coerce.number().int().min(0).default(5000),
   // Intervalle de la clôture des défis hebdomadaires (défaut : une heure) ; 0 la désactive.
