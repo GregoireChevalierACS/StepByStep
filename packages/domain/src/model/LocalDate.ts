@@ -32,7 +32,8 @@ export class LocalDate {
     return this.plusDays(-1);
   }
 
-  private plusDays(days: number): LocalDate {
+  /** Date décalée d'un nombre entier de jours (négatif : vers le passé). */
+  plusDays(days: number): LocalDate {
     const day = new Date(Date.parse(`${this.iso}T00:00:00Z`) + days * MS_PER_DAY);
     return new LocalDate(day.toISOString().slice(0, 10));
   }

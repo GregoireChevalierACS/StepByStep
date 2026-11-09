@@ -125,7 +125,57 @@ describe('groupes : /v1/accounts/:accountId/groups', () => {
     expect(await groupCount(groupId)).toBe(0);
   });
 
+  it('sert le classement de la semaine, maximum par jour entre les appareils', async () => {
+    const zoe = await member('Zoé');
+    const paul = await member('Paul');
+    const { groupId, inviteCode } = await created(zoe, 'Bureau');
+    await join(paul, inviteCode).expect(200);
+    // Pas par jour écrits directement : deux appareils pour Paul, le même jour.
+    const database = app.get(DataSource);
+    const [watch]: [{ id: string }] = await database.query(
+      'INSERT INTO devices (account_id) VALUES ($1) RETURNING id',
+      [paul.accountId],
+    );
+    await database.query(
+      `INSERT INTO daily_steps (device_id, day, steps) VALUES
+         ($1, '2026-11-03', 9000), ($2, '2026-11-03', 7000), ($3, '2026-11-04', 4000)`,
+      [paul.deviceId, watch.id, zoe.deviceId],
+    );
+
+    const response = await http()
+      .get(`${groupsOf(zoe)}/${groupId}/ranking?week=2026-W45`)
+      .set('Authorization', zoe.authorization)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      groupId,
+      week: '2026-W45',
+      from: '2026-11-02',
+      to: '2026-11-08',
+      ranking: [
+        { rank: 1, nickname: 'Paul', steps: 9000, you: false },
+        { rank: 2, nickname: 'Zoé', steps: 4000, you: true },
+      ],
+    });
+  });
+
   describe('erreurs', () => {
+    it('classement : 404 hors du groupe, 400 semaine mal écrite, 422 semaine inexistante', async () => {
+      const zoe = await member('Zoé');
+      const { groupId } = await created(zoe, 'Bureau');
+      const outsider = await member('Paul');
+      const ranking = (device: AuthenticatedDevice, week: string) =>
+        http()
+          .get(`${groupsOf(device)}/${groupId}/ranking?week=${week}`)
+          .set('Authorization', device.authorization);
+
+      await ranking(outsider, '2026-W45').expect(404);
+      await ranking(zoe, '2026-45').expect(400);
+      const invalid = await ranking(zoe, '2025-W53').expect(422);
+
+      expect(invalid.body).toMatchObject({ errors: [{ path: 'week', message: 'InvalidIsoWeek' }] });
+    });
+
     it('409 nickname-required pour créer ou rejoindre sans pseudo', async () => {
       const anonymous = await member();
       const { inviteCode } = await created(await member('Zoé'), 'Bureau');

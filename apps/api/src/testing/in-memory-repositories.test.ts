@@ -5,6 +5,7 @@ import { deviceRepositoryContract } from './contracts/device-repository.contract
 import { goalRepositoryContract } from './contracts/goal-repository.contract.js';
 import { groupRepositoryContract } from './contracts/group-repository.contract.js';
 import { outboxContract } from './contracts/outbox.contract.js';
+import { dailyStepsOf, rankingQueryContract } from './contracts/ranking-query.contract.js';
 import { readingsUnitOfWorkContract } from './contracts/readings-unit-of-work.contract.js';
 import { timeZoneRepositoryContract } from './contracts/time-zone-repository.contract.js';
 import { InMemoryAccountRepository } from './in-memory-account.repository.js';
@@ -12,6 +13,7 @@ import { InMemoryDailyStepsRepository } from './in-memory-daily-steps.repository
 import { InMemoryDeviceRepository } from './in-memory-device.repository.js';
 import { InMemoryGoalRepository } from './in-memory-goal.repository.js';
 import { InMemoryOutbox } from './in-memory-outbox.js';
+import { InMemoryRankingQuery } from './in-memory-ranking.query.js';
 import { InMemoryReadingsUnitOfWork } from './in-memory-readings-unit-of-work.js';
 import { type InMemoryStores, inMemoryStores } from './in-memory-stores.js';
 import { InMemoryTimeZoneRepository } from './in-memory-time-zone.repository.js';
@@ -56,6 +58,23 @@ describe('adapters en mémoire', () => {
         repository: stores.groups,
         accounts: new InMemoryAccountRepository(stores),
         givenAccount,
+      };
+    });
+  });
+
+  describe('InMemoryRankingQuery', () => {
+    rankingQueryContract(() => {
+      const stores = inMemoryStores(devices);
+      return {
+        query: new InMemoryRankingQuery(stores),
+        groups: stores.groups,
+        accounts: new InMemoryAccountRepository(stores),
+        givenAccount: () => devices.registerWithNewAccount(ANY_SECRET_HASH),
+        givenDevice: (accountId) => Promise.resolve(devices.givenDevice(accountId)),
+        givenDays: (deviceId, days) => {
+          stores.dailySteps.given(deviceId, dailyStepsOf(days));
+          return Promise.resolve();
+        },
       };
     });
   });

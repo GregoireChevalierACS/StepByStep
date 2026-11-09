@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
@@ -17,10 +18,11 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { DeviceAuthenticated } from '../auth/device-authenticated.decorator.js';
-import { groupResponse, groupsResponse } from '../http/contract.js';
+import { groupResponse, groupsResponse, rankingResponse } from '../http/contract.js';
 import { ApiProblems, openApiSchema } from '../http/openapi.js';
 import { uuidSchema } from '../http/schemas.js';
 import { ZodValidationPipe } from '../http/zod-validation.pipe.js';
@@ -38,7 +40,8 @@ import {
   joinGroupBody,
   type JoinGroupBody,
 } from './groups.dto.js';
-import { type GroupView, GroupsService } from './groups.service.js';
+import { type GroupView, GroupsService, type RankingView } from './groups.service.js';
+import { isoWeekSchema, rankingQuery, type RankingQueryParams } from './ranking.dto.js';
 
 // Erreurs communes à la création et à l'arrivée dans un groupe.
 const entryException = (error: AccountNotFound | NicknameRequired) =>
@@ -110,6 +113,33 @@ export class GroupsController {
     @Param('accountId', new ZodValidationPipe(uuidSchema)) accountId: string,
   ): Promise<GroupView[]> {
     return this.groups.list(accountId);
+  }
+
+  /**
+   * Classement de la semaine ISO dans le groupe. 404 aussi pour un groupe dont le compte n'est
+   * pas membre : on ne révèle pas l'existence des groupes des autres.
+   */
+  @Get(':groupId/ranking')
+  @ApiOperation({ summary: 'Classement du groupe pour une semaine ISO (lundi–dimanche)' })
+  @ApiParam({ name: 'accountId', schema: openApiSchema(uuidSchema) })
+  @ApiParam({ name: 'groupId', schema: openApiSchema(groupIdParam) })
+  @ApiQuery({ name: 'week', schema: openApiSchema(isoWeekSchema), example: '2026-W45' })
+  @ApiOkResponse({ schema: openApiSchema(rankingResponse, 'output') })
+  @ApiProblems(400, 404, 422)
+  async ranking(
+    @Param('accountId', new ZodValidationPipe(uuidSchema)) accountId: string,
+    @Param('groupId', new ZodValidationPipe(groupIdParam)) groupId: string,
+    @Query(new ZodValidationPipe(rankingQuery)) { week }: RankingQueryParams,
+  ): Promise<RankingView> {
+    const result = await this.groups.ranking(accountId, groupId, week);
+    if (result.ok) return result.value;
+    if (result.error.kind === 'GroupNotFound') {
+      throw new NotFoundException(`Groupe inconnu : ${result.error.groupId}`);
+    }
+    throw new UnprocessableEntityException({
+      message: 'Valeurs refusées par les règles métier',
+      errors: [{ path: 'week', message: result.error.kind }],
+    });
   }
 
   /** Quitter le groupe. 204 aussi si le compte n'en était pas (ou plus) membre : idempotent. */

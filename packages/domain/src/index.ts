@@ -12,6 +12,8 @@ export type {
 } from './model/GoalHistory';
 export { GroupName } from './model/GroupName';
 export type { InvalidGroupName } from './model/GroupName';
+export { IsoWeek } from './model/IsoWeek';
+export type { InvalidIsoWeek } from './model/IsoWeek';
 export { LocalDate } from './model/LocalDate';
 export { Nickname } from './model/Nickname';
 export type { InvalidNickname } from './model/Nickname';
@@ -47,6 +49,8 @@ export { computeStreak } from './services/computeStreak';
 export { dailyStepsFromReadings } from './services/dailyStepsFromReadings';
 export { distributeStepsByDay } from './services/distributeStepsByDay';
 export { goalsReached } from './services/goalsReached';
+export { accountDailySteps, weeklyRanking } from './services/weeklyRanking';
+export type { MemberActivity, RankingEntry } from './services/weeklyRanking';
 export type { GoalReached } from './services/goalsReached';
 export { FixedStrideLength, HeightBasedStrideLength } from './services/StrideLengthStrategy';
 export type { StrideLengthStrategy } from './services/StrideLengthStrategy';

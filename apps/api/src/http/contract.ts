@@ -44,6 +44,21 @@ export const groupResponse = z.strictObject({
 
 export const groupsResponse = z.array(groupResponse);
 
+export const rankingResponse = z.strictObject({
+  groupId: uuidSchema,
+  week: z.string(),
+  from: localDateSchema,
+  to: localDateSchema,
+  ranking: z.array(
+    z.strictObject({
+      rank: z.number().int().positive(),
+      nickname: z.string(),
+      steps: z.number().int().nonnegative(),
+      you: z.boolean(),
+    }),
+  ),
+});
+
 export const goalHistoryResponse = z.array(
   z.strictObject({ effectiveFrom: localDateSchema, goal: z.number().int().positive() }),
 );
